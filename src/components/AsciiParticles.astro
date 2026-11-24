@@ -1,0 +1,128 @@
+---
+// Drifting ASCII dust behind the page; nearby particles are pushed away by
+// the pointer. Adapted from the particle layer in the "entropic" theme by
+// CuB3y0nd (MIT License): https://github.com/CuB3y0nd/entropic
+---
+
+<div class="ascii-particles" aria-hidden="true"></div>
+
+<style>
+	.ascii-particles {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
+		overflow: hidden;
+		pointer-events: none;
+		contain: layout paint style;
+	}
+	.ascii-particles :global(span) {
+		position: absolute;
+		top: 0;
+		left: 0;
+		color: #f3eeff; /* overridden per particle with a neon colour */
+		font-family: var(--font-body);
+		font-size: 15px;
+		line-height: 1;
+		opacity: 0;
+		mix-blend-mode: screen;
+		/* Glow in the particle's own colour plus a slight red/cyan split, like an old CRT. */
+		text-shadow:
+			0 0 6px currentColor,
+			-1px 0 0 rgba(255, 40, 120, 0.55),
+			1px 0 0 rgba(40, 220, 255, 0.55);
+		will-change: opacity, transform;
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.ascii-particles {
+			display: none;
+		}
+	}
+</style>
+
+<script>
+	const CHARS = ['.', '.', '·', '·', ':', "'", '*'];
+	// 80s neon palette; white is listed several times so roughly a third stay white.
+	const COLORS = ['#f3eeff', '#f3eeff', '#f3eeff', '#ff2bd6', '#ff4fa3', '#2de2ff', '#2de2ff', '#4d7cff', '#b14dff', '#b14dff', '#ffb347'];
+	const RADIUS = 150; // px around the pointer that pushes particles
+	const STEP_MS = 42; // motion is tuned for one step per 42 ms
+
+	type Particle = { el: HTMLSpanElement; x: number; y: number; dx: number; dy: number; o: number; ph: number; ps: number };
+
+	const layer = document.querySelector<HTMLDivElement>('.ascii-particles');
+	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	if (layer && !reduced) {
+		const mobile = window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+		const count = mobile ? 38 : 86;
+		const rand = (a: number, b: number) => a + Math.random() * (b - a);
+		let w = window.innerWidth;
+		let h = window.innerHeight;
+		const pointer = { x: NaN, y: NaN };
+		const particles: Particle[] = [];
+
+		// New particles appear anywhere at start, then re-enter from the edges.
+		const reset = (p: Particle, inside: boolean) => {
+			const from = inside ? 'inside' : (['right', 'left', 'bottom'] as const)[Math.floor(Math.random() * 3)];
+			p.x = from === 'right' ? w + rand(4, 20) : from === 'left' ? -rand(4, 20) : rand(0, w);
+			p.y = from === 'bottom' ? h + rand(4, 20) : rand(0, h);
+			p.dx = rand(-0.28, 0.28);
+			p.dy = rand(-0.72, -0.2);
+			p.o = rand(0.4, 0.8);
+			p.ph = rand(0, Math.PI * 2);
+			p.ps = rand(0.03, 0.085);
+			p.el.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+			p.el.style.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+		};
+
+		for (let i = 0; i < count; i++) {
+			const el = document.createElement('span');
+			layer.append(el);
+			const p = { el, x: 0, y: 0, dx: 0, dy: 0, o: 0, ph: 0, ps: 0 };
+			reset(p, true);
+			particles.push(p);
+		}
+
+		let last = 0;
+		const frame = (t: number) => {
+			const k = Math.min(96, last ? t - last : STEP_MS) / STEP_MS;
+			last = t;
+			for (const p of particles) {
+				p.x += p.dx * k;
+				p.y += p.dy * k;
+				if (!Number.isNaN(pointer.x)) {
+					const dx = p.x - pointer.x;
+					const dy = p.y - pointer.y;
+					const d2 = dx * dx + dy * dy;
+					if (d2 < RADIUS * RADIUS) {
+						const d = Math.sqrt(d2);
+						const f = (1 - d / RADIUS) ** 2 * k;
+						p.x += (d ? dx / d : Math.cos(p.ph)) * f * 1.8;
+						p.y += (d ? dy / d : Math.sin(p.ph)) * f * 1.2;
+					}
+				}
+				p.ph += p.ps * k;
+				const flicker = 0.72 + Math.sin(t * 0.0017 + p.ph) * 0.28;
+				p.el.style.opacity = (p.o * flicker).toFixed(3);
+				p.el.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0)`;
+				if (p.y < -24 || p.y > h + 24 || p.x < -24 || p.x > w + 24) reset(p, false);
+			}
+			requestAnimationFrame(frame);
+		};
+		requestAnimationFrame(frame);
+
+		window.addEventListener('resize', () => { w = window.innerWidth; h = window.innerHeight; }, { passive: true });
+		window.addEventListener('pointermove', (e) => {
+			if (e.pointerType !== 'mouse') return;
+			pointer.x = e.clientX;
+			pointer.y = e.clientY;
+		}, { passive: true });
+		document.documentElement.addEventListener('pointerleave', () => { pointer.x = NaN; pointer.y = NaN; });
+		// Touch: a tap gives a short push.
+		window.addEventListener('pointerdown', (e) => {
+			if (e.pointerType === 'mouse') return;
+			pointer.x = e.clientX;
+			pointer.y = e.clientY;
+			setTimeout(() => { pointer.x = NaN; pointer.y = NaN; }, 600);
+		}, { passive: true });
+	}
+</script>

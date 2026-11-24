@@ -9,6 +9,7 @@ import { SITE_TITLE } from '../../consts';
 const projects = (await getCollection('projects')).sort(
 	(a, b) => a.data.order - b.data.order
 );
+const shapes = ['star', 'ring', 'pill', 'wave'] as const;
 ---
 
 <!doctype html>
@@ -21,8 +22,8 @@ const projects = (await getCollection('projects')).sort(
 		<main>
 			<h1>Projects</h1>
 			<ul class="project-list">
-				{projects.map((project) => (
-					<li><ProjectCard project={project} /></li>
+				{projects.map((project, i) => (
+					<li><ProjectCard project={project} shape={shapes[i % shapes.length]} /></li>
 				))}
 			</ul>
 		</main>
@@ -31,5 +32,7 @@ const projects = (await getCollection('projects')).sort(
 </html>
 
 <style>
-	.project-list { list-style: none; padding: 0; display: grid; gap: 2rem; }
+	main { width: 860px; }
+	.project-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem 1.5rem; }
+	@media (max-width: 720px) { .project-list { grid-template-columns: 1fr; } }
 </style>

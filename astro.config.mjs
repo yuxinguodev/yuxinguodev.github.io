@@ -10,26 +10,22 @@ export default defineConfig({
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
-			provider: fontProviders.local(),
-			name: 'Atkinson',
-			cssVariable: '--font-atkinson',
-			fallbacks: ['sans-serif'],
-			options: {
-				variants: [
-					{
-						src: ['./src/assets/fonts/atkinson-regular.woff'],
-						weight: 400,
-						style: 'normal',
-						display: 'swap',
-					},
-					{
-						src: ['./src/assets/fonts/atkinson-bold.woff'],
-						weight: 700,
-						style: 'normal',
-						display: 'swap',
-					},
-				],
-			},
+			// The one font used across the whole site.
+			provider: fontProviders.google(),
+			name: 'Google Sans Code',
+			cssVariable: '--font-body',
+			weights: [400, 500, 700],
+			styles: ['normal', 'italic'],
+			fallbacks: ['monospace'],
+		},
+		{
+			// Handwritten script, only used for the "For the players" motto.
+			provider: fontProviders.google(),
+			name: 'Homemade Apple',
+			cssVariable: '--font-hand',
+			weights: [400],
+			styles: ['normal'],
+			fallbacks: ['cursive'],
 		},
 	],
 });

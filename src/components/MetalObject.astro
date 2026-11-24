@@ -1,0 +1,153 @@
+---
+// A chrome-looking shape whose highlight follows the mouse.
+// Two stacked layers share the shape: a darker "rim" behind and a lighter
+// "face" slightly inset on top, which reads as a bevel. A small script
+// updates --lx / --ly (highlight position) and --ang (reflection angle).
+
+type MetalShape = 'star' | 'ring' | 'pill' | 'wave';
+
+interface Props {
+	shape: MetalShape;
+	size?: number; // height in px; width follows the shape's aspect ratio
+}
+
+const { shape, size = 130 } = Astro.props;
+
+// Points of a star polygon centred at (cx, cy).
+function starPoints(points: number, outer: number, inner: number, cx = 50, cy = 50) {
+	const out: string[] = [];
+	for (let i = 0; i < points * 2; i++) {
+		const r = i % 2 === 0 ? outer : inner;
+		const a = (Math.PI * i) / points - Math.PI / 2;
+		out.push(`${(cx + r * Math.cos(a)).toFixed(2)},${(cy + r * Math.sin(a)).toFixed(2)}`);
+	}
+	return out.join(' ');
+}
+
+// Rounded polygons: fill + a thick round-joined stroke of the same colour.
+const roundPoly = (pts: string, stroke: number) =>
+	`<polygon points="${pts}" fill="#fff" stroke="#fff" stroke-width="${stroke}" stroke-linejoin="round"/>`;
+const ring = (outer: number, inner: number) =>
+	`<path fill="#fff" fill-rule="evenodd" d="M50 ${50 - outer}a${outer} ${outer} 0 1 1 0 ${outer * 2}a${outer} ${outer} 0 1 1 0 -${outer * 2}zM50 ${50 - inner}a${inner} ${inner} 0 1 0 0 ${inner * 2}a${inner} ${inner} 0 1 0 0 -${inner * 2}z"/>`;
+
+const shapes: Record<MetalShape, { viewBox: string; rim: string; face: string }> = {
+	star: {
+		viewBox: '0 0 100 100',
+		rim: roundPoly(starPoints(5, 40, 21, 50, 53), 14),
+		face: roundPoly(starPoints(5, 36, 19, 50, 53), 10),
+	},
+	ring: { viewBox: '0 0 100 100', rim: ring(47, 13), face: ring(42, 17) },
+	pill: {
+		viewBox: '0 0 220 100',
+		rim: '<rect x="2" y="2" width="216" height="96" rx="48" fill="#fff"/>',
+		face: '<rect x="8" y="8" width="204" height="84" rx="42" fill="#fff"/>',
+	},
+	wave: {
+		viewBox: '0 0 100 100',
+		rim: roundPoly(starPoints(12, 44, 38), 8),
+		face: roundPoly(starPoints(12, 40, 34.5), 6),
+	},
+};
+
+const s = shapes[shape];
+const mask = (body: string) =>
+	`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${s.viewBox}">${body}</svg>`)}")`;
+const [, , vbW, vbH] = s.viewBox.split(' ').map(Number);
+---
+
+<div
+	class="metal"
+	aria-hidden="true"
+	style={`height:${size}px;aspect-ratio:${vbW}/${vbH};--rim:${mask(s.rim)};--face:${mask(s.face)}`}
+>
+	<span class="rim"></span>
+	<span class="face"></span>
+	<span class="gloss"></span>
+	<span class="grain"></span>
+</div>
+
+<style>
+	.metal {
+		--lx: 30%;
+		--ly: 25%;
+		--ang: 135deg;
+		position: relative;
+		filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 24px rgba(255, 255, 255, 0.07));
+		transition: transform 0.3s ease;
+	}
+	.metal span {
+		position: absolute;
+		inset: 0;
+		-webkit-mask: var(--rim) center / 100% 100% no-repeat;
+		mask: var(--rim) center / 100% 100% no-repeat;
+	}
+	/* Bright outer edge, like light catching a rounded rim. */
+	.rim {
+		background: linear-gradient(calc(var(--ang) + 180deg), #ffffff 0%, #9a9ca3 38%, #3a3b40 100%);
+	}
+	.metal .face,
+	.metal .gloss,
+	.metal .grain {
+		-webkit-mask-image: var(--face);
+		mask-image: var(--face);
+	}
+	/* Brushed chrome: vertical bands that slide sideways with the light,
+	   darkened toward the edges so the shape reads as puffy. */
+	.face {
+		background:
+			radial-gradient(closest-side, transparent 52%, rgba(18, 18, 22, 0.55) 100%),
+			linear-gradient(
+				90deg,
+				#55575d 0%,
+				#c9cacd calc(var(--lx) - 32%),
+				#ffffff calc(var(--lx) - 10%),
+				#7d7f85 calc(var(--lx) + 6%),
+				#eeeef0 calc(var(--lx) + 22%),
+				#9a9ca2 calc(var(--lx) + 40%),
+				#4d4f55 100%
+			);
+	}
+	/* Soft specular hotspot at the light position. */
+	.gloss {
+		background: radial-gradient(circle at var(--lx) var(--ly), rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 18%, transparent 45%);
+		mix-blend-mode: screen;
+	}
+	/* Fine grain on the surface. */
+	.grain {
+		background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 140px 140px;
+		mix-blend-mode: overlay;
+		opacity: 0.45;
+	}
+</style>
+
+<script>
+	// One listener drives every metal object on the page.
+	const metals = () => document.querySelectorAll<HTMLElement>('.metal');
+	let frame = 0;
+	let mx = 0;
+	let my = 0;
+
+	function update() {
+		frame = 0;
+		for (const el of metals()) {
+			const r = el.getBoundingClientRect();
+			const lx = Math.max(-40, Math.min(140, ((mx - r.left) / r.width) * 100));
+			const ly = Math.max(-40, Math.min(140, ((my - r.top) / r.height) * 100));
+			// Reflection angle swings with the horizontal offset from the object.
+			const ang = 135 + ((mx - (r.left + r.width / 2)) / window.innerWidth) * 120;
+			el.style.setProperty('--lx', `${lx.toFixed(1)}%`);
+			el.style.setProperty('--ly', `${ly.toFixed(1)}%`);
+			el.style.setProperty('--ang', `${ang.toFixed(1)}deg`);
+		}
+	}
+
+	window.addEventListener(
+		'pointermove',
+		(e) => {
+			mx = e.clientX;
+			my = e.clientY;
+			if (!frame) frame = requestAnimationFrame(update);
+		},
+		{ passive: true },
+	);
+</script>

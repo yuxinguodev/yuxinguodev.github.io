@@ -4,12 +4,56 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ProjectCard from '../components/ProjectCard.astro';
-import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+import MetalObject from '../components/MetalObject.astro';
+import FormattedDate from '../components/FormattedDate.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import ExperienceTimeline from '../components/ExperienceTimeline.astro';
+import { SITE_TITLE, SITE_DESCRIPTION, CONTACT } from '../consts';
+import { experience } from '../data/experience';
 
-// 只取 featured: true 的项目，按 order 排序
-const featured = (await getCollection('projects'))
-	.filter((project) => project.data.featured)
-	.sort((a, b) => a.data.order - b.data.order);
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+
+// 首页固定展示 4 个项目位：featured 的排前面，再按 order。
+// 不足 4 个用 "Coming soon" 补齐；超过 4 个的放在"展开更多项目"里。
+const SLOTS = 4;
+const ordered = [...projects].sort((a, b) => Number(b.data.featured) - Number(a.data.featured));
+const shown = ordered.slice(0, SLOTS);
+const extra = ordered.slice(SLOTS);
+const placeholders = Math.max(0, SLOTS - shown.length);
+// 封面图：自动读取 src/assets/covers/ 里的图片，按文件名排序循环使用。
+// 文件夹里没有图片时，封面显示银色物件。
+// （placeholder-*.webp 是网上找的临时图，已写进 .gitignore，只在本地预览用。）
+const coverFiles = import.meta.glob<{ default: ImageMetadata }>('../assets/covers/*.{webp,png,jpg,jpeg}', { eager: true });
+const covers = Object.keys(coverFiles).sort().map((key) => coverFiles[key].default);
+const coverAt = (i: number) => (covers.length ? covers[i % covers.length] : undefined);
+const shapes = ['star', 'ring', 'pill', 'wave'] as const;
+
+const posts = (await getCollection('blog'))
+	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+	.slice(0, 3);
+
+const skills = [
+	{ label: 'Languages', items: ['C++', 'C#', 'Python'] },
+	{ label: 'Tools', items: ['SFML', 'Unity', 'Git'] },
+	{ label: 'Learning', items: ['OpenGL', 'Engine architecture'] },
+];
+
+// Hero headline: the greeting is white, each letter of the name gets one
+// colour from the rainbow-paper palette. Spaces are non-breaking so each
+// character can be its own span for the typing animation.
+const greeting = "Hi, I'm ";
+const name = 'Yuxin Guo';
+const nameColors = ['#ee86ae', '#e2344f', '#f2662a', '#f8c62e', '#3f9152', '#8193c8', '#4c60d0', '#8d5cc0'];
+let colorIndex = 0;
+const headline = [
+	...[...greeting].map((ch) => ({ ch, color: undefined as string | undefined })),
+	...[...name].map((ch) => ({ ch, color: ch === ' ' ? undefined : nameColors[colorIndex++] })),
+].map(({ ch, color }) => ({ ch: ch === ' ' ? ' ' : ch, color }));
+
+// Empty links are placeholders until filled in src/consts.ts.
+const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 ---
 
 <!doctype html>
@@ -21,25 +65,154 @@ const featured = (await getCollection('projects'))
 		<Header />
 		<main>
 			<section class="hero">
-				<h1>Hi, I'm Ethan.</h1>
-				<p class="lead">
-					Game programming student in Auckland, working toward engine and
-					graphics programming. I build simulations in C++ and write about
-					what I learn along the way.
-				</p>
-				<p class="links">
-					<a href="/projects/">See all projects →</a>
-					<a href="https://github.com/yuxinguodev" target="_blank" rel="noopener">GitHub</a>
-				</p>
+				<p class="eyebrow">Game programming student · Auckland, NZ</p>
+				<h1 class="typed" aria-label={`${greeting}${name}`}>
+					{headline.map(({ ch, color }) => (
+						<span class="ch" aria-hidden="true" style={color ? `color:${color}` : undefined}>{ch}</span>
+					))}<span class="cursor" aria-hidden="true">_</span>
+				</h1>
+				<script is:inline>
+					// Runs immediately (before paint) so the full name never flashes first.
+					// Loop: type the line -> hold -> backspace it -> short pause -> repeat.
+					(function () {
+						var h = document.currentScript.previousElementSibling;
+						if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+						h.classList.add('is-typing');
+						var chars = h.querySelectorAll('.ch');
+						var HOLD_FULL = 2800; // pause with the whole line shown
+						var HOLD_EMPTY = 700; // pause after erasing, before retyping
+						var i = 0;
+						function type() {
+							h.classList.add('busy');
+							chars[i].classList.add('shown');
+							var ch = chars[i].textContent;
+							i++;
+							if (i < chars.length) {
+								setTimeout(type, ch === ' ' || ch === ',' ? 180 : 80 + Math.random() * 60);
+							} else {
+								h.classList.remove('busy');
+								setTimeout(erase, HOLD_FULL);
+							}
+						}
+						function erase() {
+							h.classList.add('busy');
+							i--;
+							chars[i].classList.remove('shown');
+							if (i > 0) {
+								setTimeout(erase, 40);
+							} else {
+								h.classList.remove('busy');
+								setTimeout(type, HOLD_EMPTY);
+							}
+						}
+						setTimeout(type, 450);
+					})();
+				</script>
+				<p class="subtitle">I build game systems and simulations in C++.</p>
+				<p class="focus">Focus on gameplay programming &amp; emergent gameplay</p>
+				<p class="motto">“For the players”</p>
+				<div class="contact">
+					<a class="btn icon" href={CONTACT.github} target="_blank" rel="noopener" aria-label="GitHub">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 19c-4.3 1.4 -4.3 -2.5 -6 -3m12 5v-3.5c0 -1 .1 -1.4 -.5 -2c2.8 -.3 5.5 -1.4 5.5 -6a4.6 4.6 0 0 0 -1.3 -3.2a4.2 4.2 0 0 0 -.1 -3.2s-1.1 -.3 -3.5 1.3a12.3 12.3 0 0 0 -6.2 0c-2.4 -1.6 -3.5 -1.3 -3.5 -1.3a4.2 4.2 0 0 0 -.1 3.2a4.6 4.6 0 0 0 -1.3 3.2c0 4.6 2.7 5.7 5.5 6c-.6 .6 -.6 1.2 -.5 2v3.5" /></svg>
+					</a>
+					<a class="btn icon" href={link(CONTACT.linkedin)} target="_blank" rel="noopener" aria-label="LinkedIn">
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11v5" /><path d="M8 8v.01" /><path d="M12 16v-5" /><path d="M16 16v-3a2 2 0 1 0 -4 0" /><path d="M3 7a4 4 0 0 1 4 -4h10a4 4 0 0 1 4 4v10a4 4 0 0 1 -4 4h-10a4 4 0 0 1 -4 -4z" /></svg>
+					</a>
+					<a class="btn" href={link(CONTACT.email, 'mailto:')}>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z" /><path d="M3 7l9 6l9 -6" /></svg>
+						Email me
+					</a>
+					<a class="btn primary" href={link(CONTACT.resume)} download={CONTACT.resume ? '' : undefined}>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" /><path d="M7 11l5 5l5 -5" /><path d="M12 4l0 12" /></svg>
+						Résumé
+					</a>
+				</div>
 			</section>
 
 			<section>
-				<h2>Featured projects</h2>
-				<ul class="project-list">
-					{featured.map((project) => (
-						<li><ProjectCard project={project} /></li>
+				<SectionHeading title="Experience" orb="ember" />
+				<ExperienceTimeline items={experience} />
+			</section>
+
+			<section>
+				<SectionHeading title="Projects" orb="rainbow" />
+				<ul class="project-grid" id="project-grid">
+					{shown.map((project, i) => (
+						<li><ProjectCard project={project} image={coverAt(i)} shape={shapes[i % shapes.length]} /></li>
+					))}
+					{Array.from({ length: placeholders }, (_, i) => {
+						const n = shown.length + i;
+						const img = coverAt(n);
+						return (
+						<li class="coming-soon">
+							<div class="cover">
+								{img ? (
+									<Image src={img} alt="" width={860} class="cover-img" />
+								) : (
+									<MetalObject shape={shapes[n % shapes.length]} />
+								)}
+							</div>
+							<div class="soon-meta">
+								<h3>Coming soon</h3>
+								<p>The next project will show up here.</p>
+							</div>
+						</li>
+						);
+					})}
+					{extra.map((project, i) => (
+						<li class="extra" hidden><ProjectCard project={project} image={coverAt(SLOTS + i)} shape={shapes[(SLOTS + i) % shapes.length]} /></li>
 					))}
 				</ul>
+				{extra.length > 0 ? (
+					<button class="more" type="button" aria-controls="project-grid" aria-expanded="false">
+						<span class="more-label">Show more projects</span>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6l6 -6" /></svg>
+					</button>
+				) : (
+					<a class="more" href="/projects/">
+						<span>All projects</span>
+						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
+					</a>
+				)}
+				<script>
+					// "Show more projects": reveal / hide the cards beyond the first four.
+					const btn = document.querySelector<HTMLButtonElement>('button.more');
+					btn?.addEventListener('click', () => {
+						const open = btn.getAttribute('aria-expanded') !== 'true';
+						btn.setAttribute('aria-expanded', String(open));
+						btn.querySelector('.more-label')!.textContent = open ? 'Show less' : 'Show more projects';
+						document.querySelectorAll<HTMLElement>('#project-grid .extra').forEach((el) => (el.hidden = !open));
+					});
+				</script>
+			</section>
+
+
+			{posts.length > 0 && (
+				<section>
+					<SectionHeading title="Devlog" orb="nebula">
+						<a href="/blog/">All entries →</a>
+					</SectionHeading>
+					<ul class="posts">
+						{posts.map((post) => (
+							<li>
+								<a href={`/blog/${post.id}/`}>{post.data.title}</a>
+								<FormattedDate date={post.data.pubDate} />
+							</li>
+						))}
+					</ul>
+				</section>
+			)}
+
+			<section>
+				<SectionHeading title="Skills" orb="verdant" />
+				<div class="skills">
+					{skills.map((group) => (
+						<div class="skill">
+							<p class="skill-label">{group.label}</p>
+							<p>{group.items.join(' · ')}</p>
+						</div>
+					))}
+				</div>
 			</section>
 		</main>
 		<Footer />
@@ -47,8 +220,264 @@ const featured = (await getCollection('projects'))
 </html>
 
 <style>
-	.hero { margin-bottom: 3rem; }
-	.lead { font-size: 1.25rem; line-height: 1.6; }
-	.links { display: flex; gap: 1.5rem; }
-	.project-list { list-style: none; padding: 0; display: grid; gap: 2rem; }
+	main {
+		width: 860px;
+		padding-top: 4.5rem;
+	}
+	section {
+		margin-bottom: 5rem;
+	}
+
+	/* Hero */
+	.eyebrow {
+		margin: 0 0 1rem;
+		font-size: 15px;
+		color: var(--accent);
+	}
+	.typed {
+		margin: 0 0 1rem;
+		font-size: 60px;
+		line-height: 1.15;
+		letter-spacing: -0.02em;
+	}
+	/* Untyped characters take no space, so the cursor follows the text. */
+	.typed.is-typing .ch {
+		display: none;
+	}
+	.typed.is-typing .ch.shown {
+		display: inline;
+	}
+	.cursor {
+		color: #ee86ae;
+		animation: blink 1s steps(1) infinite;
+	}
+	/* Solid cursor while characters are being typed or erased. */
+	.typed.busy .cursor {
+		animation: none;
+	}
+	@keyframes blink {
+		50% {
+			opacity: 0;
+		}
+	}
+	.subtitle {
+		margin: 0 0 0.6rem;
+		font-size: 26px;
+		font-weight: 700;
+		line-height: 1.4;
+		color: rgb(var(--black));
+	}
+	.focus {
+		margin: 0 0 1.5rem;
+		font-size: 17px;
+		color: rgb(var(--gray));
+	}
+	/* Handwritten motto (Homemade Apple). */
+	.motto {
+		margin: 0.25rem 0 2rem;
+		font-family: var(--font-hand);
+		font-size: 22px;
+		line-height: 1.8;
+		color: rgb(var(--gray-dark));
+	}
+	.contact {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px;
+	}
+	.btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		height: 48px;
+		box-sizing: border-box;
+		padding: 0 18px 0 16px;
+		font-size: 16px;
+		font-weight: 500;
+		color: rgb(var(--gray-dark));
+		text-decoration: none;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		transition: border-color 0.15s, color 0.15s, background 0.15s;
+	}
+	.btn.icon {
+		width: 48px;
+		padding: 0;
+	}
+	.btn:hover {
+		color: rgb(var(--black));
+		border-color: rgb(var(--gray));
+	}
+	.btn.primary {
+		color: #000;
+		background: rgb(var(--black));
+		border-color: rgb(var(--black));
+	}
+	.btn.primary:hover {
+		color: #000;
+		background: #fff;
+	}
+	.btn svg {
+		width: 20px;
+		height: 20px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	/* Projects */
+	.project-grid {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2rem 1.5rem;
+	}
+	.coming-soon .cover {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		aspect-ratio: 16 / 10; /* must match .cover in ProjectCard.astro */
+		box-sizing: border-box;
+		overflow: hidden;
+		border: 1px solid #1f1f1f;
+		border-radius: 16px;
+	}
+	/* Placeholder covers are dimmed so the real project stands out. */
+	.coming-soon .cover :global(.cover-img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+		border-radius: 0;
+		opacity: 0.45;
+		filter: saturate(0.7);
+	}
+	/* "Show more projects" bar under the grid. */
+	.more {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		width: 100%;
+		height: 52px;
+		margin-top: 2rem;
+		font: inherit;
+		font-size: 16px;
+		font-weight: 500;
+		color: rgb(var(--gray-dark));
+		text-decoration: none;
+		background: transparent;
+		border: 1px solid var(--border);
+		border-radius: 12px;
+		cursor: pointer;
+		transition: border-color 0.15s, color 0.15s, background 0.15s;
+	}
+	.more:hover {
+		color: rgb(var(--black));
+		border-color: rgb(var(--gray));
+		background: var(--surface);
+	}
+	.more svg {
+		width: 20px;
+		height: 20px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		transition: transform 0.2s;
+	}
+	.more[aria-expanded='true'] svg {
+		transform: rotate(180deg);
+	}
+	.soon-meta {
+		padding: 1rem 0.5rem 0;
+	}
+	.soon-meta h3 {
+		margin: 0;
+		font-size: 19px;
+		color: rgb(var(--gray));
+	}
+	.soon-meta p {
+		margin: 0;
+		font-size: 14px;
+		color: rgb(var(--gray));
+	}
+
+	/* Skills */
+	.skills {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1rem;
+	}
+	.skill {
+		padding: 1rem 1.25rem;
+		background: var(--surface);
+		border-radius: 10px;
+	}
+	.skill p {
+		margin: 0;
+		font-size: 16px;
+		font-weight: 500;
+		color: rgb(var(--black));
+	}
+	.skill .skill-label {
+		margin-bottom: 0.4rem;
+		font-size: 14px;
+		font-weight: 400;
+		color: rgb(var(--gray));
+	}
+
+	/* Devlog */
+	.posts {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	.posts li {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 1rem;
+		padding: 0.8rem 0;
+		border-bottom: 1px solid var(--border);
+		font-size: 16px;
+	}
+	.posts li:last-child {
+		border-bottom: none;
+	}
+	.posts a {
+		color: rgb(var(--gray-dark));
+		text-decoration: none;
+	}
+	.posts a:hover {
+		color: var(--accent);
+	}
+	.posts :global(time) {
+		flex-shrink: 0;
+		font-size: 14px;
+		color: rgb(var(--gray));
+	}
+
+	@media (max-width: 720px) {
+		main {
+			padding-top: 2rem;
+		}
+		.typed {
+			font-size: 34px;
+		}
+		.subtitle {
+			font-size: 20px;
+		}
+		.project-grid,
+		.skills {
+			grid-template-columns: 1fr;
+		}
+	}
 </style>

@@ -1,0 +1,198 @@
+---
+// A small sphere filled with a slowly flowing, noise-warped gradient (WebGL).
+// Look and palettes are modelled on the "Moving gradient" shader fills used
+// in the reference Figma file. Without WebGL it falls back to a static
+// CSS gradient of the same colours.
+
+// Colours taken from the shader fills in the reference Figma file.
+// Up to 8 stops each; positions are 0–1 along the gradient.
+const ORB_PALETTES = {
+	ember: { stops: [[0, '#c90d02'], [0.5, '#fd9700'], [1, '#f7db8d']], speed: 1.0, seed: 1.7 },
+	coral: { stops: [[0, '#f18383'], [0.72, '#f18383'], [0.88, '#da27cd'], [1, '#3300fc']], speed: 0.8, seed: 8.2 },
+	nebula: { stops: [[0, '#03001e'], [0.25, '#7303c0'], [0.5, '#ec38bc'], [1, '#fdeff9']], speed: 0.7, seed: 3.1 },
+	verdant: { stops: [[0, '#6a9113'], [0.5, '#66da27'], [1, '#141517']], speed: 0.75, seed: 4.4 },
+	rainbow: {
+		stops: [[0.1, '#ff0000'], [0.245, '#ff7f00'], [0.413, '#ffff00'], [0.591, '#00ff00'], [0.74, '#0000ff'], [0.86, '#4b0082'], [1, '#8b00ff']],
+		speed: 0.65,
+		seed: 6.6,
+	},
+} as const;
+
+type OrbPalette = keyof typeof ORB_PALETTES;
+
+interface Props {
+	palette: OrbPalette;
+	size?: number;
+}
+
+const { palette, size = 40 } = Astro.props;
+const p = ORB_PALETTES[palette];
+const fallback = `radial-gradient(circle at 35% 30%, ${p.stops.map(([pos, c]) => `${c} ${pos * 100}%`).join(', ')})`;
+---
+
+<canvas
+	class="orb"
+	aria-hidden="true"
+	width={size * 2}
+	height={size * 2}
+	style={`width:${size}px;height:${size}px;background:${fallback}`}
+	data-stops={JSON.stringify(p.stops)}
+	data-speed={p.speed}
+	data-seed={p.seed}
+></canvas>
+
+<style>
+	.orb {
+		display: block;
+		flex-shrink: 0;
+		border-radius: 50%;
+	}
+	/* Once WebGL is drawing, drop the CSS fallback. */
+	.orb.live {
+		background: none !important;
+	}
+</style>
+
+<script>
+	const VERT = `
+		attribute vec2 a;
+		varying vec2 uv;
+		void main() { uv = a * 0.5 + 0.5; gl_Position = vec4(a, 0.0, 1.0); }
+	`;
+
+	// Domain-warped fbm noise mapped through a gradient, shaded like a sphere.
+	const FRAG = `
+		precision mediump float;
+		varying vec2 uv;
+		uniform float t;
+		uniform float seed;
+		uniform vec2 dir;          // random flow direction (unit vector)
+		uniform float spin;        // random rotation direction and rate
+		uniform float px;          // one pixel in uv units, for the soft edge
+		uniform vec3 col[8];
+		uniform float pos[8];
+
+		float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+		float noise(vec2 p) {
+			vec2 i = floor(p), f = fract(p);
+			vec2 u = f * f * (3.0 - 2.0 * f);
+			return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+		}
+		float fbm(vec2 p) {
+			float v = 0.0, a = 0.5;
+			for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + 11.7; a *= 0.5; }
+			return v;
+		}
+		vec3 gradient(float x) {
+			vec3 c = col[0];
+			for (int i = 1; i < 8; i++) {
+				// Equal positions (padding stops) would make smoothstep undefined.
+				float k = pos[i] > pos[i - 1] ? smoothstep(pos[i - 1], pos[i], x) : step(pos[i], x);
+				c = mix(c, col[i], k);
+			}
+			return c;
+		}
+		void main() {
+			vec2 q = uv * 2.0 - 1.0;
+			float r = length(q);
+			float edge = 1.0 - smoothstep(1.0 - 2.0 * px, 1.0, r);
+			if (edge <= 0.0) { gl_FragColor = vec4(0.0); return; }
+
+			// Bulge the coordinates so the pattern wraps around a ball.
+			float z = sqrt(max(0.0, 1.0 - r * r));
+			vec2 st = q / (0.6 + 0.4 * z) * 1.2;
+			// Slow rotation of the whole pattern.
+			float a = t * spin;
+			st = mat2(cos(a), -sin(a), sin(a), cos(a)) * st + seed;
+			// Two warp layers drifting in different random-ish directions,
+			// then the colour field itself flowing along dir.
+			vec2 warp = vec2(
+				fbm(st + dir * t * 0.32),
+				fbm(st * 1.15 + vec2(5.2, 1.3) - dir.yx * t * 0.27)
+			);
+			float f = fbm(st + 2.1 * warp + dir * t * 0.14);
+			f = clamp((f - 0.25) * 1.8, 0.0, 1.0);
+			vec3 c = gradient(f);
+
+			// Soft sphere shading: light from the upper left, darker rim, small highlight.
+			vec3 n = vec3(q, z);
+			float light = max(dot(n, normalize(vec3(-0.45, 0.55, 0.7))), 0.0);
+			c *= 0.62 + 0.45 * light;
+			c += pow(light, 24.0) * 0.18;
+			c *= mix(0.55, 1.0, smoothstep(0.0, 0.45, z));
+
+			gl_FragColor = vec4(c * edge, edge);
+		}
+	`;
+
+	const hexToRgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+	const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	type Orb = { gl: WebGLRenderingContext; uT: WebGLUniformLocation | null; speed: number; visible: boolean; canvas: HTMLCanvasElement };
+	const orbs: Orb[] = [];
+
+	for (const canvas of document.querySelectorAll<HTMLCanvasElement>('canvas.orb')) {
+		const gl = canvas.getContext('webgl', { premultipliedAlpha: true, antialias: true });
+		if (!gl) continue; // keep the CSS fallback
+		const sh = (type: number, src: string) => {
+			const s = gl.createShader(type)!;
+			gl.shaderSource(s, src);
+			gl.compileShader(s);
+			return s;
+		};
+		const prog = gl.createProgram()!;
+		gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+		gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+		gl.linkProgram(prog);
+		if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) continue;
+		gl.useProgram(prog);
+
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+		const a = gl.getAttribLocation(prog, 'a');
+		gl.enableVertexAttribArray(a);
+		gl.vertexAttribPointer(a, 2, gl.FLOAT, false, 0, 0);
+
+		// Up to 8 stops; pad by repeating the last one.
+		const stops: [number, string][] = JSON.parse(canvas.dataset.stops!);
+		while (stops.length < 8) stops.push(stops[stops.length - 1]);
+		gl.uniform3fv(gl.getUniformLocation(prog, 'col'), stops.slice(0, 8).flatMap(([, c]) => hexToRgb(c)));
+		gl.uniform1fv(gl.getUniformLocation(prog, 'pos'), stops.slice(0, 8).map(([p]) => p));
+		// Randomised per page load so each orb flows its own way.
+		const angle = Math.random() * Math.PI * 2;
+		gl.uniform1f(gl.getUniformLocation(prog, 'seed'), Number(canvas.dataset.seed) + Math.random() * 50);
+		gl.uniform2f(gl.getUniformLocation(prog, 'dir'), Math.cos(angle), Math.sin(angle));
+		gl.uniform1f(gl.getUniformLocation(prog, 'spin'), (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.06));
+		gl.uniform1f(gl.getUniformLocation(prog, 'px'), 1 / canvas.width);
+
+		gl.viewport(0, 0, canvas.width, canvas.height);
+		canvas.classList.add('live');
+		const speed = Number(canvas.dataset.speed) * (0.85 + Math.random() * 0.3);
+		orbs.push({ gl, uT: gl.getUniformLocation(prog, 't'), speed, visible: true, canvas });
+	}
+
+	const draw = (o: Orb, seconds: number) => {
+		o.gl.uniform1f(o.uT, seconds * o.speed);
+		o.gl.drawArrays(o.gl.TRIANGLE_STRIP, 0, 4);
+	};
+
+	if (reduced) {
+		for (const o of orbs) draw(o, 12); // one still frame
+	} else if (orbs.length) {
+		// Only animate orbs that are on screen.
+		const io = new IntersectionObserver((entries) => {
+			for (const e of entries) {
+				const o = orbs.find((x) => x.canvas === e.target);
+				if (o) o.visible = e.isIntersecting;
+			}
+		});
+		for (const o of orbs) io.observe(o.canvas);
+		const start = performance.now();
+		const loop = (now: number) => {
+			const s = (now - start) / 1000 + 10;
+			for (const o of orbs) if (o.visible) draw(o, s);
+			requestAnimationFrame(loop);
+		};
+		requestAnimationFrame(loop);
+	}
+</script>

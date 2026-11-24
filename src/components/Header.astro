@@ -1,88 +1,195 @@
 ---
 import { SITE_TITLE } from '../consts';
 import HeaderLink from './HeaderLink.astro';
+import AsciiParticles from './AsciiParticles.astro';
+// Icons are Tabler Icons (MIT), inlined so no icon library is needed.
 ---
 
 <header>
-	<nav>
-		<h2>
-			<a href="/">{SITE_TITLE}</a>
-		</h2>
-		<div class="internal-links">
-			<HeaderLink href="/">Home</HeaderLink>
-			<HeaderLink href="/projects">Projects</HeaderLink>
-			<HeaderLink href="/blog">Blog</HeaderLink>
-			<HeaderLink href="/about">About</HeaderLink>
-		</div>
-		<div class="social-links">
-			<a href="https://m.webtoo.ls/@astro" target="_blank">
-				<span class="sr-only">Follow Astro on Mastodon</span>
-				<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-					<path
-						fill="currentColor"
-						d="M11.19 12.195c2.016-.24 3.77-1.475 3.99-2.603.348-1.778.32-4.339.32-4.339 0-3.47-2.286-4.488-2.286-4.488C12.062.238 10.083.017 8.027 0h-.05C5.92.017 3.942.238 2.79.765c0 0-2.285 1.017-2.285 4.488l-.002.662c-.004.64-.007 1.35.011 2.091.083 3.394.626 6.74 3.78 7.57 1.454.383 2.703.463 3.709.408 1.823-.1 2.847-.647 2.847-.647l-.06-1.317s-1.303.41-2.767.36c-1.45-.05-2.98-.156-3.215-1.928a3.614 3.614 0 0 1-.033-.496s1.424.346 3.228.428c1.103.05 2.137-.064 3.188-.189zm1.613-2.47H11.13v-4.08c0-.859-.364-1.295-1.091-1.295-.804 0-1.207.517-1.207 1.541v2.233H7.168V5.89c0-1.024-.403-1.541-1.207-1.541-.727 0-1.091.436-1.091 1.296v4.079H3.197V5.522c0-.859.22-1.541.66-2.046.456-.505 1.052-.764 1.793-.764.856 0 1.504.328 1.933.983L8 4.39l.417-.695c.429-.655 1.077-.983 1.934-.983.74 0 1.336.259 1.791.764.442.505.661 1.187.661 2.046v4.203z"
-					></path>
-				</svg>
-			</a>
-			<a href="https://twitter.com/astrodotbuild" target="_blank">
-				<span class="sr-only">Follow Astro on Twitter</span>
-				<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-					<path
-						fill="currentColor"
-						d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.006-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.087.793A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115 3.23 3.23 0 0 1-.614-.057 3.283 3.283 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"
-					></path>
-				</svg>
-			</a>
-			<a href="https://github.com/yuxinguodev" target="_blank">
-				<span class="sr-only">Go to Astro's GitHub repo</span>
-				<svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
-					<path
-						fill="currentColor"
-						d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
-					></path>
-				</svg>
-			</a>
-		</div>
+	<a class="site-name" href="/">Isekai Voyage Log</a>
+
+	<nav class="pill" aria-label="Main">
+		<!-- Glass lens that follows the pointer on hover. -->
+		<span class="lens" aria-hidden="true"></span>
+		<HeaderLink href="/" label="Home">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
+		</HeaderLink>
+		<HeaderLink href="/projects" label="Projects">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5" /><path d="M12 12l8 -4.5" /><path d="M12 12l0 9" /><path d="M12 12l-8 -4.5" /></svg>
+		</HeaderLink>
+		<HeaderLink href="/blog" label="Devlog">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /></svg>
+		</HeaderLink>
+		<HeaderLink href="/about" label="About">
+			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
+		</HeaderLink>
 	</nav>
+
+	<a class="github" href="https://github.com/yuxinguodev" target="_blank" rel="noopener">
+		<span class="sr-only">GitHub</span>
+		<svg viewBox="0 0 16 16" aria-hidden="true" width="24" height="24">
+			<path
+				fill="currentColor"
+				d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+			></path>
+		</svg>
+	</a>
 </header>
+
+<!-- Lives here so every page that has the header also gets the background. -->
+<AsciiParticles />
+
 <style>
+	/* Floats at the top while scrolling so content passes under the glass. */
 	header {
-		margin: 0;
-		padding: 0 1em;
-		background: white;
-		box-shadow: 0 2px 8px rgba(var(--black), 5%);
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
+		align-items: center;
+		gap: 1rem;
+		max-width: 1100px;
+		margin: 0 auto;
+		padding: 1rem 1.5rem;
+		pointer-events: none; /* only the visible controls take clicks */
 	}
-	h2 {
-		margin: 0;
-		font-size: 1em;
+	header > * {
+		pointer-events: auto;
+	}
+	.site-name {
+		font-weight: 700;
+		font-size: 17px;
+		color: rgb(var(--black));
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.site-name,
+	.github {
+		transition: opacity 0.25s, visibility 0.25s;
+	}
+	/* Once scrolled, only the glass pill stays visible. */
+	header.scrolled .site-name,
+	header.scrolled .github {
+		opacity: 0;
+		visibility: hidden;
 	}
 
-	h2 a,
-	h2 a.active {
-		text-decoration: none;
-	}
-	nav {
+	/* Glass pill: long, low, fully rounded ends. */
+	.pill {
+		position: relative;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
+		gap: 4px;
+		padding: 5px 8px;
+		border-radius: 999px;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.03));
+		-webkit-backdrop-filter: blur(18px) saturate(170%);
+		backdrop-filter: blur(18px) saturate(170%);
+		border: 1px solid rgba(255, 255, 255, 0.13);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.22),
+			inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+			0 10px 30px rgba(0, 0, 0, 0.5);
 	}
-	nav a {
-		padding: 1em 0.5em;
-		color: var(--black);
-		border-bottom: 4px solid transparent;
-		text-decoration: none;
+	/* Soft reflection across the top half of the glass. */
+	.pill::before {
+		content: '';
+		position: absolute;
+		inset: 1px 14px auto;
+		height: 45%;
+		border-radius: 999px;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
+		pointer-events: none;
 	}
-	nav a.active {
-		text-decoration: none;
-		border-bottom-color: var(--accent);
+	/* Magnifying lens: a brighter bubble of glass that follows the pointer. */
+	.lens {
+		position: absolute;
+		top: 50%;
+		left: 0;
+		width: 62px;
+		height: 46px;
+		border-radius: 999px;
+		background: radial-gradient(120% 90% at 50% 20%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.1));
+		-webkit-backdrop-filter: blur(3px) brightness(1.25) saturate(180%);
+		backdrop-filter: blur(3px) brightness(1.25) saturate(180%);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		box-shadow:
+			inset 0 1px 1px rgba(255, 255, 255, 0.45),
+			inset 0 -4px 10px rgba(255, 255, 255, 0.08),
+			0 6px 16px rgba(0, 0, 0, 0.45);
+		transform: translate(var(--lens-x, 0px), -50%) scale(0.6);
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.2s, transform 0.12s ease-out;
 	}
-	.social-links,
-	.social-links a {
+	.pill.hovering .lens {
+		opacity: 1;
+		transform: translate(var(--lens-x, 0px), -50%) scale(1);
+	}
+	.pill :global(svg) {
+		width: 22px;
+		height: 22px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.github {
+		justify-self: end;
 		display: flex;
+		color: rgb(var(--gray));
+	}
+	.github:hover {
+		color: rgb(var(--black));
 	}
 	@media (max-width: 720px) {
-		.social-links {
+		header {
+			grid-template-columns: 1fr;
+			justify-items: center;
+		}
+		.site-name,
+		.github {
 			display: none;
 		}
 	}
 </style>
+
+<script>
+	const header = document.querySelector('header');
+	const pill = document.querySelector<HTMLElement>('nav.pill');
+
+	// Fade the name and GitHub icon once the page has scrolled.
+	const onScroll = () => header?.classList.toggle('scrolled', window.scrollY > 40);
+	window.addEventListener('scroll', onScroll, { passive: true });
+	onScroll();
+
+	// Hover: the lens slides to the pointer and nearby icons grow (dock-style).
+	if (pill && window.matchMedia('(hover: hover)').matches) {
+		const lens = pill.querySelector<HTMLElement>('.lens')!;
+		const items = [...pill.querySelectorAll<HTMLElement>('a')];
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const RANGE = 90; // px over which the magnification falls off
+		const MAX = 0.45; // extra scale for the icon right under the pointer
+
+		pill.addEventListener('pointermove', (e) => {
+			const box = pill.getBoundingClientRect();
+			const x = e.clientX - box.left;
+			const half = lens.offsetWidth / 2;
+			lens.style.setProperty('--lens-x', `${Math.max(0, Math.min(box.width - 2 * half, x - half))}px`);
+			pill.classList.add('hovering');
+			if (reduced) return;
+			for (const item of items) {
+				const r = item.getBoundingClientRect();
+				const d = Math.abs(e.clientX - (r.left + r.width / 2));
+				const s = 1 + MAX * Math.max(0, 1 - d / RANGE) ** 2;
+				item.style.setProperty('--mag', s.toFixed(3));
+			}
+		});
+		pill.addEventListener('pointerleave', () => {
+			pill.classList.remove('hovering');
+			for (const item of items) item.style.setProperty('--mag', '1');
+		});
+	}
+</script>

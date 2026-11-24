@@ -15,7 +15,7 @@ const posts = (await getCollection('blog')).sort(
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<BaseHead title={`Devlog | ${SITE_TITLE}`} description="Development notes on what I build and learn." />
 		<style>
 			main {
 				width: 960px;

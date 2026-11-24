@@ -1,0 +1,48 @@
+---
+import GradientOrb from './GradientOrb.astro';
+
+// Section title: a flowing gradient orb on the left edge of the content
+// column, the title (always ending in ".") to its right, and anything in
+// the slot (e.g. an "All entries →" link) at the right end of the row.
+interface Props {
+	title: string;
+	orb: 'ember' | 'coral' | 'nebula' | 'verdant' | 'rainbow';
+}
+
+const { title, orb } = Astro.props;
+---
+
+<div class="section-heading">
+	<GradientOrb palette={orb} size={40} />
+	<h2>{title}.</h2>
+	<div class="extra"><slot /></div>
+</div>
+
+<style>
+	.section-heading {
+		display: flex;
+		align-items: center;
+		gap: 18px;
+		margin-bottom: 1.75rem;
+	}
+	h2 {
+		flex: 1;
+		min-width: 0;
+		margin: 0;
+		font-size: 40px;
+		line-height: 1.2;
+	}
+	.extra :global(a) {
+		font-size: 16px;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	@media (max-width: 720px) {
+		.section-heading {
+			gap: 14px;
+		}
+		h2 {
+			font-size: 30px;
+		}
+	}
+</style>

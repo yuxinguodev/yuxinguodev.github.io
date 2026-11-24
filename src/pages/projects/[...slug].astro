@@ -58,12 +58,12 @@ const { title, summary, cover, tags, github, status } = project.data;
 
 <style>
 	.back { display: inline-block; margin-bottom: 1rem; text-decoration: none; }
-	.summary { font-size: 1.2rem; color: #555; }
+	.summary { font-size: 1.2rem; color: rgb(var(--gray)); }
 	.meta { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
 	.status { font-size: 0.85rem; padding: 0.2rem 0.7rem; border-radius: 999px; }
-	.status.in-progress { background: #fff3cd; color: #8a6d00; }
-	.status.completed { background: #d4edda; color: #1e6b33; }
+	.status.in-progress { background: rgba(239, 159, 39, 0.15); color: #f2b84b; }
+	.status.completed { background: rgba(99, 153, 34, 0.18); color: #97c459; }
 	.tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-	.tags li { font-size: 0.85rem; padding: 0.1rem 0.6rem; background: #eee; border-radius: 999px; }
+	.tags li { font-size: 0.85rem; padding: 0.1rem 0.6rem; background: var(--surface-raised); color: rgb(var(--gray-dark)); border-radius: 999px; }
 	.cover { width: 100%; border-radius: 8px; margin: 1.5rem 0; }
 </style>
