@@ -3,9 +3,9 @@ import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
 import { SITE_TITLE } from '../../consts';
 
-// 读取所有项目，按 order 从小到大排序
 const projects = (await getCollection('projects')).sort(
 	(a, b) => a.data.order - b.data.order
 );
@@ -22,18 +22,7 @@ const projects = (await getCollection('projects')).sort(
 			<h1>Projects</h1>
 			<ul class="project-list">
 				{projects.map((project) => (
-					<li class="project-card">
-						<a href={`/projects/${project.id}/`}>
-							{project.data.cover && (
-								<img src={project.data.cover} alt={project.data.title} loading="lazy" />
-							)}
-							<h2>{project.data.title}</h2>
-							<p>{project.data.summary}</p>
-							<ul class="tags">
-								{project.data.tags.map((tag) => <li>{tag}</li>)}
-							</ul>
-						</a>
-					</li>
+					<li><ProjectCard project={project} /></li>
 				))}
 			</ul>
 		</main>
@@ -43,12 +32,4 @@ const projects = (await getCollection('projects')).sort(
 
 <style>
 	.project-list { list-style: none; padding: 0; display: grid; gap: 2rem; }
-	.project-card a {
-		display: block; padding: 1.5rem; color: inherit; text-decoration: none;
-		border: 1px solid #ddd; border-radius: 8px;
-	}
-	.project-card a:hover { border-color: var(--accent); }
-	.project-card img { width: 100%; border-radius: 4px; }
-	.tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-	.tags li { font-size: 0.85rem; padding: 0.1rem 0.6rem; background: #eee; border-radius: 999px; }
 </style>
