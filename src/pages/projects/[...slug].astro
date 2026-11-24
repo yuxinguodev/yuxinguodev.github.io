@@ -1,0 +1,69 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseHead from '../../components/BaseHead.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { SITE_TITLE } from '../../consts';
+
+// 构建时运行：每个项目生成一页
+export async function getStaticPaths() {
+	const projects = await getCollection('projects');
+	return projects.map((project) => ({
+		params: { slug: project.id },   // 网址：/projects/sand-falling/
+		props: { project },             // 把项目数据传给这一页
+	}));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);   // 把 Markdown 正文变成 HTML
+const { title, summary, cover, tags, github, status } = project.data;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`${title} | ${SITE_TITLE}`} description={summary} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<article>
+				<a href="/projects/" class="back">← All projects</a>
+				<h1>{title}</h1>
+				<p class="summary">{summary}</p>
+
+				<div class="meta">
+					<span class={`status ${status}`}>
+						{status === 'completed' ? 'Completed' : 'In progress'}
+					</span>
+					{github && (
+						<a href={github} target="_blank" rel="noopener">View on GitHub →</a>
+					)}
+				</div>
+
+				<ul class="tags">
+					{tags.map((tag) => <li>{tag}</li>)}
+				</ul>
+
+				{cover && <img src={cover} alt={title} class="cover" />}
+
+				<div class="content">
+					<Content />
+				</div>
+			</article>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.back { display: inline-block; margin-bottom: 1rem; text-decoration: none; }
+	.summary { font-size: 1.2rem; color: #555; }
+	.meta { display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
+	.status { font-size: 0.85rem; padding: 0.2rem 0.7rem; border-radius: 999px; }
+	.status.in-progress { background: #fff3cd; color: #8a6d00; }
+	.status.completed { background: #d4edda; color: #1e6b33; }
+	.tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+	.tags li { font-size: 0.85rem; padding: 0.1rem 0.6rem; background: #eee; border-radius: 999px; }
+	.cover { width: 100%; border-radius: 8px; margin: 1.5rem 0; }
+</style>
