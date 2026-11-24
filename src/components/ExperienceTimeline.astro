@@ -28,12 +28,13 @@ const sparkle = starPath(4, 9, 2.2);
 <div class="timeline-scroll at-top" tabindex="0" aria-label="Experience timeline, scrollable">
 	<ol class="timeline">
 		{items.map((item, i) => (
-			<li class:list={['entry', i % 2 === 0 ? 'left' : 'right', { current: item.current, active: i === 0 }]}>
+			<li class:list={['entry', i % 2 === 0 ? 'left' : 'right', { current: item.current, active: i === 0, education: item.kind === 'education', game: item.kind === 'game' }]}>
 				<div class="content">
 					<p class="period">{item.period}</p>
-					<h3>{item.title}</h3>
-					<p class="org">{item.org}{item.location && <span> · {item.location}</span>}</p>
-					<p class="desc">{item.description}</p>
+					<h3><span class="mark">{item.title}</span></h3>
+					<p class="org">{item.org}</p>
+					{item.location && <p class="location">{item.location}</p>}
+					{item.description && <p class="desc">{item.description}</p>}
 					{item.tags && (
 						<ul class="tags">
 							{item.tags.map((tag) => <li>{tag}</li>)}
@@ -74,6 +75,8 @@ const sparkle = starPath(4, 9, 2.2);
 		overscroll-behavior: auto; /* at either end the page carries on scrolling */
 		padding: 1rem 0;
 		scrollbar-width: none;
+		/* Touch / trackpad: settle on one entry at a time (wheel is handled in the script). */
+		scroll-snap-type: y mandatory;
 		-webkit-mask-image: linear-gradient(transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
 		mask-image: linear-gradient(transparent, #000 var(--fade-top), #000 calc(100% - var(--fade-bottom)), transparent);
 	}
@@ -147,6 +150,7 @@ const sparkle = starPath(4, 9, 2.2);
 	}
 
 	.content {
+		scroll-snap-align: center; /* touch / trackpad settle with the text in the middle */
 		transition: opacity 0.3s;
 		opacity: 0.55;
 	}
@@ -165,12 +169,37 @@ const sparkle = starPath(4, 9, 2.2);
 		margin: 0 0 0.15rem;
 		font-size: 19px;
 	}
+	/* Education: green highlighter stroke behind the title (every line when it wraps).
+	   Colours match the green "n" and red "u" of the hero name. */
+	.education .mark {
+		background: linear-gradient(transparent 58%, rgba(63, 145, 82, 0.55) 58%, rgba(63, 145, 82, 0.55) 92%, transparent 92%);
+		-webkit-box-decoration-break: clone;
+		box-decoration-break: clone;
+		padding: 0 0.15em;
+	}
+	/* ...and a green ring on its timeline dot. */
+	.education .dot {
+		border-color: #3f9152;
+	}
+	/* Game: same treatment in red. */
+	.game .mark {
+		background: linear-gradient(transparent 58%, rgba(226, 52, 79, 0.5) 58%, rgba(226, 52, 79, 0.5) 92%, transparent 92%);
+		-webkit-box-decoration-break: clone;
+		box-decoration-break: clone;
+		padding: 0 0.15em;
+	}
+	.game .dot {
+		border-color: #e2344f;
+	}
 	.org {
 		margin: 0 0 0.5rem;
 		font-size: 15px;
 		color: rgb(var(--gray-dark));
 	}
-	.org span {
+	/* Location sits on its own line under the organisation. */
+	.location {
+		margin: -0.4rem 0 0.5rem;
+		font-size: 14px;
 		color: rgb(var(--gray));
 	}
 	.desc {
@@ -345,32 +374,71 @@ const sparkle = starPath(4, 9, 2.2);
 <script>
 	const box = document.querySelector<HTMLElement>('.timeline-scroll');
 	if (box) {
+		const list = box.querySelector<HTMLElement>('.timeline')!;
 		const entries = [...box.querySelectorAll<HTMLElement>('.entry')];
-		const update = () => {
-			const atTop = box.scrollTop <= 2;
-			const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 2;
-			box.classList.toggle('at-top', atTop);
-			box.classList.toggle('at-bottom', atBottom);
+		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		let current = 0;
 
-			// Active entry: the one whose top is nearest a focus line 30% down the box
-			// (forced to the first / last entry at either end of the scroll).
-			let active = 0;
-			if (atBottom && !atTop) active = entries.length - 1;
-			else if (!atTop) {
-				const focus = box.getBoundingClientRect().top + box.clientHeight * 0.3;
-				let best = Infinity;
-				entries.forEach((el, i) => {
-					const d = Math.abs(el.getBoundingClientRect().top - focus);
-					if (d < best) {
-						best = d;
-						active = i;
-					}
-				});
-			}
-			entries.forEach((el, i) => el.classList.toggle('active', i === active));
+		const content = (el: HTMLElement) => el.querySelector<HTMLElement>('.content')!;
+		const middle = (el: HTMLElement) => {
+			const r = content(el).getBoundingClientRect();
+			return r.top + r.height / 2;
 		};
+		const boxMiddle = () => {
+			const r = box.getBoundingClientRect();
+			return r.top + r.height / 2;
+		};
+		// scrollTop that puts entry i in the vertical middle of the box.
+		const centred = (i: number) => box.scrollTop + middle(entries[i]) - boxMiddle();
+
+		// Space above the first and below the last entry so both can reach the middle too.
+		const fitSpace = () => {
+			const half = box.clientHeight / 2;
+			list.style.paddingTop = `${Math.max(0, half - content(entries[0]).offsetHeight / 2 - 16)}px`;
+			list.style.paddingBottom = `${Math.max(0, half - content(entries[entries.length - 1]).offsetHeight / 2 - 16)}px`;
+		};
+
+		const update = () => {
+			box.classList.toggle('at-top', box.scrollTop <= 2);
+			box.classList.toggle('at-bottom', box.scrollTop + box.clientHeight >= box.scrollHeight - 2);
+			// Active entry: the one whose middle is nearest the middle of the box.
+			const mid = boxMiddle();
+			let best = Infinity;
+			entries.forEach((el, i) => {
+				const d = Math.abs(middle(el) - mid);
+				if (d < best) {
+					best = d;
+					current = i;
+				}
+			});
+			entries.forEach((el, i) => el.classList.toggle('active', i === current));
+		};
+
+		// Mouse wheel: one notch moves exactly one entry. Past the first or last
+		// entry the event is left alone so the page keeps scrolling.
+		let target = 0;
+		let lockedUntil = 0;
+		box.addEventListener(
+			'wheel',
+			(e) => {
+				if (Math.abs(e.deltaY) < 2) return;
+				const now = performance.now();
+				const from = now < lockedUntil ? target : current;
+				const next = from + Math.sign(e.deltaY);
+				if (next < 0 || next >= entries.length) return;
+				e.preventDefault();
+				if (now < lockedUntil) return; // still settling from the last step
+				target = next;
+				lockedUntil = now + 550;
+				box.scrollTo({ top: centred(next), behavior: reduced ? 'auto' : 'smooth' });
+			},
+			{ passive: false },
+		);
+
 		box.addEventListener('scroll', update, { passive: true });
-		window.addEventListener('resize', update, { passive: true });
+		window.addEventListener('resize', () => { fitSpace(); update(); }, { passive: true });
+		fitSpace();
+		box.scrollTop = centred(0); // start with the first entry in the middle
 		update();
 	}
 </script>

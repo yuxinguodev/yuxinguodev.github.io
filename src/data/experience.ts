@@ -6,33 +6,54 @@ export interface ExperienceEntry {
 	title: string; // role, degree or achievement
 	org: string; // company, school, event
 	location?: string;
-	description: string;
+	description?: string;
 	tags?: string[];
 	current?: boolean; // highlights the dot on the timeline
+	kind?: 'education' | 'game'; // education = green highlight, game = red highlight
 }
 
 export const experience: ExperienceEntry[] = [
 	{
-		period: '2025 — Present',
-		title: '[Degree] in Game Programming',
-		org: '[School name]',
+		period: 'Jul 2026 — Jun 2029 (expected)',
+		title: 'Bachelor of Software Engineering (Game Programming)',
+		org: 'Media Design School',
+		kind: 'education',
 		location: 'Auckland, NZ',
-		description: '[One or two lines about what you study and focus on, e.g. engine architecture, gameplay systems, C++.]',
-		tags: ['C++', 'Game engines', 'Gameplay'],
 		current: true,
 	},
 	{
 		period: '[Month Year]',
 		title: '[Game jam / competition name]',
 		org: '[Team or event]',
+		kind: 'game',
 		description: '[What you built, your role, and the result.]',
 		tags: ['Unity', 'C#'],
 	},
 	{
-		period: '[Year — Year]',
-		title: '[Previous role or study]',
-		org: '[Organisation]',
-		location: '[City]',
-		description: '[What you did and what you learned that carries into game programming.]',
+		period: 'Sep 2018 — Mar 2025',
+		title: 'Landscape Designer / Interior Decoration Designer',
+		org: "Jiang'an Liya Zhuyuan Real Estate Co., Ltd.",
+	},
+	{
+		period: 'May 2017 — May 2018',
+		title: 'Landscape Designer',
+		org: 'Sichuan Guoheng Architectural Design Co., Ltd.',
+	},
+	{
+		period: 'Oct 2014 — Apr 2017',
+		title: 'Assistant Landscape Designer',
+		org: 'Chengdu Xixi Landscape Planning and Design Co., Ltd.',
+	},
+	{
+		period: 'Sep 2011 — Jun 2015',
+		title: 'Bachelor of Arts in Art Design (Landscape Architecture)',
+		org: 'College of Arts and Sciences, Sichuan Normal University',
+		kind: 'education',
+	},
+	{
+		period: 'Jun 2013 — Sep 2014',
+		title: 'Landscape Design Intern',
+		org: 'Sichuan Xinhengsheng Real Estate Co., Ltd.',
+		location: 'Chengdu, China',
 	},
 ];

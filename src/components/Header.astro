@@ -1,29 +1,19 @@
 ---
-import { SITE_TITLE } from '../consts';
-import HeaderLink from './HeaderLink.astro';
+import GooeyNav from './GooeyNav.astro';
 import AsciiParticles from './AsciiParticles.astro';
-// Icons are Tabler Icons (MIT), inlined so no icon library is needed.
 ---
 
 <header>
 	<a class="site-name" href="/">Isekai Voyage Log</a>
 
-	<nav class="pill" aria-label="Main">
-		<!-- Glass lens that follows the pointer on hover. -->
-		<span class="lens" aria-hidden="true"></span>
-		<HeaderLink href="/" label="Home">
-			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg>
-		</HeaderLink>
-		<HeaderLink href="/projects" label="Projects">
-			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5" /><path d="M12 12l8 -4.5" /><path d="M12 12l0 9" /><path d="M12 12l-8 -4.5" /></svg>
-		</HeaderLink>
-		<HeaderLink href="/blog" label="Devlog">
-			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /></svg>
-		</HeaderLink>
-		<HeaderLink href="/about" label="About">
-			<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></svg>
-		</HeaderLink>
-	</nav>
+	<GooeyNav
+		items={[
+			{ label: 'Home', href: '/' },
+			{ label: 'Projects', href: '/projects' },
+			{ label: 'Articles', href: '/blog' },
+			{ label: 'About', href: '/about' },
+		]}
+	/>
 
 	<a class="github" href="https://github.com/yuxinguodev" target="_blank" rel="noopener">
 		<span class="sr-only">GitHub</span>
@@ -40,7 +30,7 @@ import AsciiParticles from './AsciiParticles.astro';
 <AsciiParticles />
 
 <style>
-	/* Floats at the top while scrolling so content passes under the glass. */
+	/* Floats at the top while scrolling; the nav's blurred frame shows content passing under it. */
 	header {
 		position: sticky;
 		top: 0;
@@ -54,7 +44,8 @@ import AsciiParticles from './AsciiParticles.astro';
 		padding: 1rem 1.5rem;
 		pointer-events: none; /* only the visible controls take clicks */
 	}
-	header > * {
+	/* :global so it also reaches child components like GooeyNav (scoped styles would skip them). */
+	header > :global(*) {
 		pointer-events: auto;
 	}
 	.site-name {
@@ -68,74 +59,13 @@ import AsciiParticles from './AsciiParticles.astro';
 	.github {
 		transition: opacity 0.25s, visibility 0.25s;
 	}
-	/* Once scrolled, only the glass pill stays visible. */
+	/* Once scrolled, only the nav stays visible. */
 	header.scrolled .site-name,
 	header.scrolled .github {
 		opacity: 0;
 		visibility: hidden;
 	}
 
-	/* Glass pill: long, low, fully rounded ends. */
-	.pill {
-		position: relative;
-		display: flex;
-		align-items: center;
-		gap: 4px;
-		padding: 5px 8px;
-		border-radius: 999px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.03));
-		-webkit-backdrop-filter: blur(18px) saturate(170%);
-		backdrop-filter: blur(18px) saturate(170%);
-		border: 1px solid rgba(255, 255, 255, 0.13);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.22),
-			inset 0 -1px 0 rgba(0, 0, 0, 0.35),
-			0 10px 30px rgba(0, 0, 0, 0.5);
-	}
-	/* Soft reflection across the top half of the glass. */
-	.pill::before {
-		content: '';
-		position: absolute;
-		inset: 1px 14px auto;
-		height: 45%;
-		border-radius: 999px;
-		background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent);
-		pointer-events: none;
-	}
-	/* Magnifying lens: a brighter bubble of glass that follows the pointer. */
-	.lens {
-		position: absolute;
-		top: 50%;
-		left: 0;
-		width: 62px;
-		height: 46px;
-		border-radius: 999px;
-		background: radial-gradient(120% 90% at 50% 20%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.05) 60%, rgba(255, 255, 255, 0.1));
-		-webkit-backdrop-filter: blur(3px) brightness(1.25) saturate(180%);
-		backdrop-filter: blur(3px) brightness(1.25) saturate(180%);
-		border: 1px solid rgba(255, 255, 255, 0.3);
-		box-shadow:
-			inset 0 1px 1px rgba(255, 255, 255, 0.45),
-			inset 0 -4px 10px rgba(255, 255, 255, 0.08),
-			0 6px 16px rgba(0, 0, 0, 0.45);
-		transform: translate(var(--lens-x, 0px), -50%) scale(0.6);
-		opacity: 0;
-		pointer-events: none;
-		transition: opacity 0.2s, transform 0.12s ease-out;
-	}
-	.pill.hovering .lens {
-		opacity: 1;
-		transform: translate(var(--lens-x, 0px), -50%) scale(1);
-	}
-	.pill :global(svg) {
-		width: 22px;
-		height: 22px;
-		fill: none;
-		stroke: currentColor;
-		stroke-width: 2;
-		stroke-linecap: round;
-		stroke-linejoin: round;
-	}
 	.github {
 		justify-self: end;
 		display: flex;
@@ -158,38 +88,9 @@ import AsciiParticles from './AsciiParticles.astro';
 
 <script>
 	const header = document.querySelector('header');
-	const pill = document.querySelector<HTMLElement>('nav.pill');
-
 	// Fade the name and GitHub icon once the page has scrolled.
 	const onScroll = () => header?.classList.toggle('scrolled', window.scrollY > 40);
 	window.addEventListener('scroll', onScroll, { passive: true });
 	onScroll();
 
-	// Hover: the lens slides to the pointer and nearby icons grow (dock-style).
-	if (pill && window.matchMedia('(hover: hover)').matches) {
-		const lens = pill.querySelector<HTMLElement>('.lens')!;
-		const items = [...pill.querySelectorAll<HTMLElement>('a')];
-		const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-		const RANGE = 90; // px over which the magnification falls off
-		const MAX = 0.45; // extra scale for the icon right under the pointer
-
-		pill.addEventListener('pointermove', (e) => {
-			const box = pill.getBoundingClientRect();
-			const x = e.clientX - box.left;
-			const half = lens.offsetWidth / 2;
-			lens.style.setProperty('--lens-x', `${Math.max(0, Math.min(box.width - 2 * half, x - half))}px`);
-			pill.classList.add('hovering');
-			if (reduced) return;
-			for (const item of items) {
-				const r = item.getBoundingClientRect();
-				const d = Math.abs(e.clientX - (r.left + r.width / 2));
-				const s = 1 + MAX * Math.max(0, 1 - d / RANGE) ** 2;
-				item.style.setProperty('--mag', s.toFixed(3));
-			}
-		});
-		pill.addEventListener('pointerleave', () => {
-			pill.classList.remove('hovering');
-			for (const item of items) item.style.setProperty('--mag', '1');
-		});
-	}
 </script>

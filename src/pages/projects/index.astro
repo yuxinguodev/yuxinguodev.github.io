@@ -1,15 +1,33 @@
 ---
+import { Image } from 'astro:assets';
 import { getCollection } from 'astro:content';
 import BaseHead from '../../components/BaseHead.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import ProjectCard from '../../components/ProjectCard.astro';
+import GradientCover from '../../components/GradientCover.astro';
+import ProjectCarousel from '../../components/ProjectCarousel.astro';
+import SectionHeading from '../../components/SectionHeading.astro';
+import { coverAt } from '../../data/covers';
 import { SITE_TITLE } from '../../consts';
 
 const projects = (await getCollection('projects')).sort(
 	(a, b) => a.data.order - b.data.order
 );
-const shapes = ['star', 'ring', 'pill', 'wave'] as const;
+
+// Carousel: real projects, padded with "Coming soon" so the strip isn't sparse.
+const MIN_SLIDES = 4;
+const slides = [
+	...projects.map((project, i) => ({
+		href: `/projects/${project.id}/`,
+		title: project.data.title,
+		image: coverAt(i),
+		seed: project.id,
+	})),
+	...Array.from({ length: Math.max(0, MIN_SLIDES - projects.length) }, (_, i) => {
+		const n = projects.length + i;
+		return { title: 'Coming soon', image: coverAt(n), seed: `soon-${n}` };
+	}),
+];
 ---
 
 <!doctype html>
@@ -20,19 +38,161 @@ const shapes = ['star', 'ring', 'pill', 'wave'] as const;
 	<body>
 		<Header />
 		<main>
-			<h1>Projects</h1>
-			<ul class="project-list">
-				{projects.map((project, i) => (
-					<li><ProjectCard project={project} shape={shapes[i % shapes.length]} /></li>
-				))}
-			</ul>
+			<ProjectCarousel items={slides} />
+
+			<section>
+				<SectionHeading title="Projects" orb="rainbow" />
+				<ul class="cards">
+					{projects.map((project, i) => {
+						const img = coverAt(i);
+						return (
+							<li>
+								<a class="card" href={`/projects/${project.id}/`}>
+									<span class="cover">
+										{img ? (
+											<Image src={img} alt="" width={720} height={450} />
+										) : (
+											<GradientCover seed={project.id} />
+										)}
+									</span>
+									<span class="card-title">{project.data.title}</span>
+									<span class="meta">
+										<span class={`status status-${project.data.status}`}>
+											{project.data.status === 'completed' ? 'Completed' : 'In progress'}
+										</span>
+										{project.data.tags.slice(0, 3).map((tag) => <span class="tag">{tag}</span>)}
+									</span>
+								</a>
+							</li>
+						);
+					})}
+					{Array.from({ length: Math.max(0, MIN_SLIDES - projects.length) }, (_, i) => {
+						const n = projects.length + i;
+						const img = coverAt(n);
+						return (
+							<li class="soon">
+								<span class="cover">
+									{img ? (
+										<Image src={img} alt="" width={720} height={450} />
+									) : (
+										<GradientCover seed={`soon-${n}`} />
+									)}
+								</span>
+								<span class="card-title">Coming soon</span>
+								<span class="meta"><span class="soon-note">The next project will show up here.</span></span>
+							</li>
+						);
+					})}
+				</ul>
+			</section>
 		</main>
 		<Footer />
 	</body>
 </html>
 
 <style>
-	main { width: 860px; }
-	.project-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem 1.5rem; }
-	@media (max-width: 720px) { .project-list { grid-template-columns: 1fr; } }
+	main {
+		width: 960px;
+		padding-top: 1rem;
+	}
+	section {
+		margin-bottom: 4rem;
+	}
+
+	/* Same card layout as the Articles page. */
+	.cards {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2rem 1.5rem;
+	}
+	.card {
+		display: block;
+		color: inherit;
+		text-decoration: none;
+	}
+	.cover {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		aspect-ratio: 16 / 10;
+		overflow: hidden;
+		border-radius: 16px;
+		border: 1px solid #1f1f1f;
+		background: #121212;
+		transition: border-color 0.2s;
+	}
+	.cover :global(img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0;
+		transition: transform 0.4s ease;
+	}
+	.card:hover .cover {
+		border-color: #333;
+	}
+	.card:hover .cover :global(img) {
+		transform: scale(1.04);
+	}
+	.card-title {
+		display: block;
+		margin: 0.9rem 0.25rem 0.35rem;
+		font-size: 19px;
+		font-weight: 700;
+		color: rgb(var(--black));
+	}
+	.meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0 0.25rem;
+	}
+	.status {
+		padding: 0.1rem 0.55rem;
+		font-size: 12px;
+		font-weight: 500;
+		line-height: 1.4;
+		border-radius: 6px;
+	}
+	.status-in-progress {
+		color: #f2b84b;
+		background: rgba(239, 159, 39, 0.15);
+		border: 1px solid rgba(239, 159, 39, 0.4);
+	}
+	.status-completed {
+		color: #97c459;
+		background: rgba(99, 153, 34, 0.18);
+		border: 1px solid rgba(99, 153, 34, 0.45);
+	}
+	/* "Coming soon" placeholders: dimmed cover, muted text. */
+	.soon .cover :global(img),
+	.soon .cover :global(.gradient-cover) {
+		opacity: 0.45;
+		filter: saturate(0.7);
+	}
+	.soon .card-title {
+		color: rgb(var(--gray));
+	}
+	.soon-note {
+		font-size: 14px;
+		color: rgb(var(--gray));
+	}
+	.tag {
+		padding: 0.1rem 0.55rem;
+		font-size: 12px;
+		color: rgb(var(--gray-dark));
+		background: var(--surface-raised);
+		border-radius: 999px;
+	}
+
+	@media (max-width: 720px) {
+		.cards {
+			grid-template-columns: 1fr;
+		}
+	}
 </style>

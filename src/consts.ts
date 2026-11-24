@@ -9,7 +9,7 @@ export const SITE_DESCRIPTION = 'Game programming student in Auckland, NZ. I bui
 // resume points to a file in public/ (e.g. public/resume.pdf -> '/resume.pdf').
 export const CONTACT = {
 	github: 'https://github.com/yuxinguodev',
-	linkedin: '',
-	email: '',
+	linkedin: 'https://www.linkedin.com/in/ethan-guo-237115112/',
+	email: 'guoyuxinstudio@gmail.com',
 	resume: '',
 };

@@ -4,14 +4,14 @@ import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import ProjectCard from '../components/ProjectCard.astro';
-import type { ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
-import MetalObject from '../components/MetalObject.astro';
 import FormattedDate from '../components/FormattedDate.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import ExperienceTimeline from '../components/ExperienceTimeline.astro';
 import { SITE_TITLE, SITE_DESCRIPTION, CONTACT } from '../consts';
 import { experience } from '../data/experience';
+import { coverAt } from '../data/covers';
+import GradientCover from '../components/GradientCover.astro';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 
@@ -22,13 +22,10 @@ const ordered = [...projects].sort((a, b) => Number(b.data.featured) - Number(a.
 const shown = ordered.slice(0, SLOTS);
 const extra = ordered.slice(SLOTS);
 const placeholders = Math.max(0, SLOTS - shown.length);
-// 封面图：自动读取 src/assets/covers/ 里的图片，按文件名排序循环使用。
-// 文件夹里没有图片时，封面显示银色物件。
-// （placeholder-*.webp 是网上找的临时图，已写进 .gitignore，只在本地预览用。）
-const coverFiles = import.meta.glob<{ default: ImageMetadata }>('../assets/covers/*.{webp,png,jpg,jpeg}', { eager: true });
-const covers = Object.keys(coverFiles).sort().map((key) => coverFiles[key].default);
-const coverAt = (i: number) => (covers.length ? covers[i % covers.length] : undefined);
-const shapes = ['star', 'ring', 'pill', 'wave'] as const;
+// 封面图规则见 src/data/covers.ts（本地有图用图，没有图用随机颜色的颗粒渐变）。
+
+// Shown on each article's category tag.
+const CATEGORY_LABELS = { devlog: 'Devlog', tutorial: 'Tutorial', essay: 'Essay' } as const;
 
 const posts = (await getCollection('blog'))
 	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
@@ -138,7 +135,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 				<SectionHeading title="Projects" orb="rainbow" />
 				<ul class="project-grid" id="project-grid">
 					{shown.map((project, i) => (
-						<li><ProjectCard project={project} image={coverAt(i)} shape={shapes[i % shapes.length]} /></li>
+						<li><ProjectCard project={project} image={coverAt(i)} /></li>
 					))}
 					{Array.from({ length: placeholders }, (_, i) => {
 						const n = shown.length + i;
@@ -149,7 +146,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 								{img ? (
 									<Image src={img} alt="" width={860} class="cover-img" />
 								) : (
-									<MetalObject shape={shapes[n % shapes.length]} />
+									<GradientCover seed={`soon-${n}`} />
 								)}
 							</div>
 							<div class="soon-meta">
@@ -160,7 +157,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 						);
 					})}
 					{extra.map((project, i) => (
-						<li class="extra" hidden><ProjectCard project={project} image={coverAt(SLOTS + i)} shape={shapes[(SLOTS + i) % shapes.length]} /></li>
+						<li class="extra" hidden><ProjectCard project={project} image={coverAt(SLOTS + i)} /></li>
 					))}
 				</ul>
 				{extra.length > 0 ? (
@@ -189,14 +186,20 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 
 			{posts.length > 0 && (
 				<section>
-					<SectionHeading title="Devlog" orb="nebula">
-						<a href="/blog/">All entries →</a>
+					<SectionHeading title="Articles" orb="nebula">
+						<a href="/blog/">All articles →</a>
 					</SectionHeading>
 					<ul class="posts">
 						{posts.map((post) => (
 							<li>
-								<a href={`/blog/${post.id}/`}>{post.data.title}</a>
-								<FormattedDate date={post.data.pubDate} />
+								<a class="post" href={`/blog/${post.id}/`}>
+									<span class="thumb">
+										{post.data.heroImage && <Image src={post.data.heroImage} alt="" width={176} height={110} />}
+									</span>
+									<span class="post-title">{post.data.title}</span>
+									<span class={`cat cat-${post.data.category}`}>{CATEGORY_LABELS[post.data.category]}</span>
+									<FormattedDate date={post.data.pubDate} />
+								</a>
 							</li>
 						))}
 					</ul>
@@ -348,6 +351,9 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 		border-radius: 16px;
 	}
 	/* Placeholder covers are dimmed so the real project stands out. */
+	.coming-soon .cover :global(.gradient-cover) {
+		opacity: 0.45;
+	}
 	.coming-soon .cover :global(.cover-img) {
 		display: block;
 		width: 100%;
@@ -434,35 +440,90 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 		color: rgb(var(--gray));
 	}
 
-	/* Devlog */
+	/* Articles: thumbnail | title | category tag ........ date */
 	.posts {
 		list-style: none;
 		padding: 0;
 		margin: 0;
 	}
 	.posts li {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		gap: 1rem;
-		padding: 0.8rem 0;
 		border-bottom: 1px solid var(--border);
-		font-size: 16px;
 	}
 	.posts li:last-child {
 		border-bottom: none;
 	}
-	.posts a {
+	.post {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 0.9rem 0;
 		color: rgb(var(--gray-dark));
 		text-decoration: none;
+		font-size: 16px;
 	}
-	.posts a:hover {
-		color: var(--accent);
+	.thumb {
+		flex-shrink: 0;
+		width: 88px;
+		height: 55px;
+		overflow: hidden;
+		border-radius: 10px;
+		background: var(--surface-raised);
+		border: 1px solid var(--border);
+	}
+	.thumb :global(img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		border-radius: 0;
+		transition: transform 0.3s ease;
+	}
+	.post:hover .thumb :global(img) {
+		transform: scale(1.06);
+	}
+	.post-title {
+		min-width: 0;
+		transition: color 0.15s;
+	}
+	.post:hover .post-title {
+		color: rgb(var(--black));
+	}
+	/* Category tag; colours come from the hero name's palette. */
+	.cat {
+		--c: 141, 92, 192;
+		flex-shrink: 0;
+		padding: 0.15rem 0.6rem;
+		font-size: 12px;
+		font-weight: 500;
+		line-height: 1.4;
+		color: rgb(var(--c));
+		background: rgba(var(--c), 0.16);
+		border: 1px solid rgba(var(--c), 0.45);
+		border-radius: 6px;
+	}
+	.cat-devlog {
+		--c: 167, 120, 220; /* purple, from the "o" */
+	}
+	.cat-tutorial {
+		--c: 110, 132, 240; /* blue, from the "u" in Guo */
+	}
+	.cat-essay {
+		--c: 242, 102, 42; /* orange, from the "x" */
 	}
 	.posts :global(time) {
 		flex-shrink: 0;
+		margin-left: auto;
 		font-size: 14px;
 		color: rgb(var(--gray));
+	}
+	@media (max-width: 560px) {
+		.thumb {
+			width: 64px;
+			height: 40px;
+		}
+		.posts :global(time) {
+			display: none;
+		}
 	}
 
 	@media (max-width: 720px) {
