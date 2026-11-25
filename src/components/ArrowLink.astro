@@ -1,0 +1,88 @@
+---
+// Text link with an arrow: grey at rest; on hover the text turns white, an
+// underline grows across and the tilted arrow swings level. `back` puts a
+// left-pointing arrow before the text (for "← All projects" style links).
+interface Props {
+	href: string;
+	back?: boolean;
+	class?: string;
+}
+
+const { href, back = false, class: extra } = Astro.props;
+const arrow = 'M2 12h18m-7-7l7 7l-7 7';
+---
+
+<a class:list={['arrow-link', { back }, extra]} href={href}>
+	{back && (
+		<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d={arrow} /></svg>
+	)}
+	<span class="text"><slot /></span>
+	{!back && (
+		<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d={arrow} /></svg>
+	)}
+</a>
+
+<style>
+	.arrow-link {
+		--ease: cubic-bezier(0.25, 0.8, 0.25, 1);
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		font-size: 16px;
+		font-weight: 400;
+		color: #8a8a8a;
+		text-decoration: none;
+		transition: color 400ms var(--ease);
+	}
+	.arrow-link:hover,
+	.arrow-link:focus-visible {
+		color: #fff;
+		outline: none;
+	}
+	/* Underline that grows from the left. */
+	.arrow-link::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		bottom: -7px;
+		width: 0%;
+		height: 1px;
+		background-color: #fff;
+		pointer-events: none;
+		transition: width 500ms var(--ease);
+	}
+	.arrow-link:hover::after,
+	.arrow-link:focus-visible::after {
+		width: 100%;
+	}
+	.icon {
+		width: 0.9em;
+		height: 0.9em;
+		margin-left: 10px;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 2.2;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		transform: rotate(-45deg);
+		transition: transform 0.5s ease-out;
+	}
+	.back .icon {
+		margin: 0 10px 0 0;
+		transform: scaleX(-1) rotate(-45deg);
+	}
+	.arrow-link:hover .icon,
+	.arrow-link:focus-visible .icon {
+		transform: rotate(0deg);
+	}
+	.back:hover .icon,
+	.back:focus-visible .icon {
+		transform: scaleX(-1) rotate(0deg);
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.arrow-link::after,
+		.icon {
+			transition: none;
+		}
+	}
+</style>

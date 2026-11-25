@@ -12,6 +12,10 @@ import { SITE_TITLE, SITE_DESCRIPTION, CONTACT } from '../consts';
 import { experience } from '../data/experience';
 import { coverAt } from '../data/covers';
 import GradientCover from '../components/GradientCover.astro';
+import { TOOLS } from '../data/tools';
+import ArrowLink from '../components/ArrowLink.astro';
+import GaletteIcon from '../components/GaletteIcon.astro';
+import { Font } from 'astro:assets';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
 
@@ -57,6 +61,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 <html lang="en">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+		<Font cssVariable="--font-display" />
 	</head>
 	<body>
 		<Header />
@@ -132,7 +137,9 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 			</section>
 
 			<section>
-				<SectionHeading title="Projects" orb="rainbow" />
+				<SectionHeading title="Projects" orb="rainbow">
+					<ArrowLink href="/projects/">All projects</ArrowLink>
+				</SectionHeading>
 				<ul class="project-grid" id="project-grid">
 					{shown.map((project, i) => (
 						<li><ProjectCard project={project} image={coverAt(i)} /></li>
@@ -160,16 +167,11 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 						<li class="extra" hidden><ProjectCard project={project} image={coverAt(SLOTS + i)} /></li>
 					))}
 				</ul>
-				{extra.length > 0 ? (
+				{extra.length > 0 && (
 					<button class="more" type="button" aria-controls="project-grid" aria-expanded="false">
 						<span class="more-label">Show more projects</span>
 						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6l6 -6" /></svg>
 					</button>
-				) : (
-					<a class="more" href="/projects/">
-						<span>All projects</span>
-						<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l14 0" /><path d="M13 18l6 -6" /><path d="M13 6l6 6" /></svg>
-					</a>
 				)}
 				<script>
 					// "Show more projects": reveal / hide the cards beyond the first four.
@@ -187,7 +189,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 			{posts.length > 0 && (
 				<section>
 					<SectionHeading title="Articles" orb="nebula">
-						<a href="/blog/">All articles →</a>
+						<ArrowLink href="/blog/">All articles</ArrowLink>
 					</SectionHeading>
 					<ul class="posts">
 						{posts.map((post) => (
@@ -205,6 +207,29 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 					</ul>
 				</section>
 			)}
+
+			<section>
+				<SectionHeading title="Tools" orb="tide">
+					<ArrowLink href="/tools/">All tools</ArrowLink>
+				</SectionHeading>
+				{/* Four compact app tiles in a row; empty slots say "Coming soon". */}
+				<div class="tools">
+					{TOOLS.slice(0, 4).map((tool) => (
+						<a class="tool" href={tool.href} title={tool.note}>
+							<span class="tool-icon">
+								{tool.href === '/tools/galette' ? <GaletteIcon /> : <span class="blank"><GradientCover seed={tool.title} /></span>}
+							</span>
+							<span class="tool-name">{tool.title}</span>
+						</a>
+					))}
+					{Array.from({ length: Math.max(0, 4 - TOOLS.length) }, (_, i) => (
+						<div class="tool soon">
+							<span class="tool-icon"><span class="blank"><GradientCover seed={`tool-soon-${i}`} /></span></span>
+							<span class="tool-name">Coming soon</span>
+						</div>
+					))}
+				</div>
+			</section>
 
 			<section>
 				<SectionHeading title="Skills" orb="verdant" />
@@ -437,6 +462,57 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 		margin-bottom: 0.4rem;
 		font-size: 14px;
 		font-weight: 400;
+		color: rgb(var(--gray));
+	}
+
+	/* Tool tiles: four big app icons in a row, name underneath, no card behind. */
+	.tools {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 1.5rem;
+	}
+	@media (max-width: 720px) {
+		.tools {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+	.tool {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+		text-decoration: none;
+	}
+	.tool-icon {
+		display: block;
+		width: 100%;
+		aspect-ratio: 1;
+		transition: transform 0.3s cubic-bezier(0.3, 0.7, 0.4, 1.4);
+	}
+	.tool-icon :global(svg) {
+		width: 100%;
+		height: 100%;
+	}
+	a.tool:hover .tool-icon {
+		transform: translateY(-6px) rotate(-3deg);
+	}
+	/* Placeholder: a dim gradient squircle matching the real icon's shape and inset. */
+	.blank {
+		display: block;
+		width: 90%;
+		height: 90%;
+		margin: 5%;
+		overflow: hidden;
+		border-radius: 23%;
+		opacity: 0.45;
+		filter: saturate(0.7);
+	}
+	.tool-name {
+		font-size: 15px;
+		font-weight: 500;
+		color: rgb(var(--black));
+	}
+	.tool.soon .tool-name {
 		color: rgb(var(--gray));
 	}
 

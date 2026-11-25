@@ -151,10 +151,15 @@ const active = Math.max(0, items.findIndex((item) => item.href === first || item
 			color: var(--ink);
 		}
 	}
+	/* Phones: tighter items so all five fit on a 375px screen. */
 	@media (max-width: 480px) {
+		.gooey-nav {
+			--pad: 4px;
+			--gap: 2px;
+		}
 		.link {
-			padding: 8px 12px;
-			font-size: 14px;
+			padding: 8px 8px;
+			font-size: 12.5px;
 		}
 	}
 </style>

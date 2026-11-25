@@ -1,0 +1,169 @@
+---
+// A row of colour swatches that swell like a dock: the hovered swatch grows
+// most and its two neighbours on each side grow a little. Hovering shows the
+// colour value (hex unless the page picks another format via data-label /
+// data-copy); clicking copies it. With `interactive={false}` it is just a
+// picture (used as the Tools card cover).
+
+interface Props {
+	colors: string[];
+	interactive?: boolean;
+}
+
+const { colors, interactive = true } = Astro.props;
+const Tag = interactive ? 'button' : 'span';
+---
+
+<div class:list={['swatches', { still: !interactive }]} data-swatches={interactive ? '' : undefined}>
+	{colors.map((color) => (
+		<Tag
+			class="swatch"
+			style={`--color:${color}`}
+			data-color={color.toUpperCase()}
+			data-label={color.toUpperCase()}
+			type={interactive ? 'button' : undefined}
+			aria-label={interactive ? `Copy ${color.toUpperCase()}` : undefined}
+			aria-hidden={interactive ? undefined : 'true'}
+		/>
+	))}
+</div>
+
+<style>
+	.swatches {
+		display: flex;
+		transform-style: preserve-3d;
+		transform: perspective(1000px);
+	}
+	.swatch {
+		--ease: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+		position: relative;
+		flex-shrink: 0;
+		width: 40px;
+		height: 50px;
+		padding: 0;
+		background: none;
+		border: none;
+		outline: none;
+		cursor: pointer;
+		transform-origin: 50% 100%; /* grow upward, like a dock */
+		transition: transform 500ms var(--ease);
+	}
+	/* The colour chip, a little wider than its slot so neighbours overlap. */
+	.swatch::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		width: 50px;
+		height: 50px;
+		background-color: var(--color);
+		border-radius: 10px; /* 12px once scaled: matches the dock corner minus its padding */
+		transform: scale(1.2);
+		pointer-events: none;
+		transition: transform 500ms var(--ease);
+	}
+	/* Hex tooltip above the chip. */
+	.swatch::before {
+		content: attr(data-label); /* set by the page to the chosen format */
+		position: absolute;
+		left: 65%;
+		bottom: 66px;
+		padding: 2px 6px;
+		font: 500 11px/16px var(--font-body, monospace);
+		color: #111;
+		white-space: nowrap;
+		background-color: #fff;
+		border-radius: 6px;
+		transform: translateX(-50%);
+		pointer-events: none;
+		opacity: 0;
+		visibility: hidden;
+		transition: opacity 500ms var(--ease), visibility 500ms var(--ease);
+	}
+	/* Swatches near either end anchor their tooltip inwards so long values stay on screen. */
+	.swatch:nth-child(-n + 2)::before {
+		left: 0;
+		transform: none;
+	}
+	.swatch:nth-last-child(-n + 2)::before {
+		left: auto;
+		right: -10px;
+		transform: none;
+	}
+	.swatch[data-copied]::before {
+		content: 'Copied ✓';
+	}
+	.swatch:active::after {
+		transform: scale(1.1);
+	}
+	.swatch:focus-visible::after {
+		box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
+	}
+
+	/* The dock swell: hovered 1.5, neighbours 1.3, next ones 1.15. */
+	.swatches:not(.still) .swatch:hover,
+	.swatches:not(.still) .swatch[data-copied] {
+		transform: scale(1.5);
+		z-index: 30;
+	}
+	.swatches:not(.still) .swatch:hover::before,
+	.swatches:not(.still) .swatch[data-copied]::before {
+		opacity: 1;
+		visibility: visible;
+	}
+	.swatches:not(.still) .swatch:hover + .swatch,
+	.swatches:not(.still) .swatch:has(+ .swatch:hover) {
+		transform: scale(1.3);
+		z-index: 20;
+	}
+	.swatches:not(.still) .swatch:hover + .swatch + .swatch,
+	.swatches:not(.still) .swatch:has(+ .swatch + .swatch:hover) {
+		transform: scale(1.15);
+		z-index: 10;
+	}
+
+	.still .swatch {
+		cursor: default;
+	}
+
+	@media (max-width: 480px) {
+		.swatch {
+			width: 30px;
+			height: 38px;
+		}
+		.swatch::after {
+			width: 38px;
+			height: 38px;
+		}
+		.swatch::before {
+			bottom: 50px;
+		}
+	}
+</style>
+
+<script>
+	const copy = async (text: string) => {
+		try {
+			await navigator.clipboard.writeText(text);
+		} catch {
+			// Older browsers / insecure origins: fall back to a hidden textarea.
+			const area = Object.assign(document.createElement('textarea'), { value: text });
+			area.style.cssText = 'position:fixed;opacity:0';
+			document.body.append(area);
+			area.select();
+			document.execCommand('copy');
+			area.remove();
+		}
+	};
+
+	document.querySelectorAll<HTMLElement>('[data-swatches]').forEach((row) => {
+		row.addEventListener('click', async (event) => {
+			const swatch = (event.target as HTMLElement).closest<HTMLElement>('.swatch');
+			if (!swatch) return;
+			await copy(swatch.dataset.copy ?? swatch.dataset.color!);
+			row.querySelectorAll('[data-copied]').forEach((el) => el.removeAttribute('data-copied'));
+			swatch.setAttribute('data-copied', '');
+			clearTimeout(Number(swatch.dataset.timer));
+			swatch.dataset.timer = String(setTimeout(() => swatch.removeAttribute('data-copied'), 1200));
+		});
+	});
+</script>

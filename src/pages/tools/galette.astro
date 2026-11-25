@@ -1,0 +1,318 @@
+---
+import { Font } from 'astro:assets';
+import BaseHead from '../../components/BaseHead.astro';
+import ColorSwatches from '../../components/ColorSwatches.astro';
+import Footer from '../../components/Footer.astro';
+import GaletteBadge from '../../components/GaletteBadge.astro';
+import ArrowLink from '../../components/ArrowLink.astro';
+import Header from '../../components/Header.astro';
+import NeonOption from '../../components/NeonOption.astro';
+import { PALETTES } from '../../data/palettes';
+import { SITE_TITLE } from '../../consts';
+
+const ENGINES = [
+	{ value: 'web', label: 'Web' },
+	{ value: 'unity', label: 'Unity' },
+	{ value: 'godot', label: 'Godot' },
+	{ value: 'unreal', label: 'Unreal' },
+];
+const FORMATS = [
+	{ value: 'hex', label: 'HEX' },
+	{ value: 'rgb', label: '0–255' },
+	{ value: 'float', label: '0–1' },
+];
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Galette | Tools | ${SITE_TITLE}`} description="Galette, a game palette: colours for effects, UI and game worlds. Copy any colour as CSS, Unity, Godot or Unreal code." />
+		<Font cssVariable="--font-display" preload />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<p class="back"><ArrowLink href="/tools/" back>All tools</ArrowLink></p>
+			<div class="masthead">
+				<h1 class="visually-hidden">Galette: Game Palette</h1>
+				<GaletteBadge />
+				<div class="about">
+					<p class="lede">Colours I keep reaching for in games: effects, UI and worlds.</p>
+				</div>
+			</div>
+
+			<div class="pickers">
+					<fieldset class="picker">
+						<legend>Engine</legend>
+						<div class="options">
+							{ENGINES.map((o, i) => <NeonOption name="engine" value={o.value} label={o.label} checked={i === 0} />)}
+						</div>
+					</fieldset>
+					<fieldset class="picker">
+						<legend>Format</legend>
+						<div class="options">
+							{FORMATS.map((o) => <NeonOption name="format" value={o.value} label={o.label} checked={o.value === 'rgb'} />)}
+						</div>
+					</fieldset>
+					<p class="preview">Example <code data-preview>rgb(<span class="value">238, 134, 174</span>)</code></p>
+			</div>
+
+			<ul class="palettes">
+				{PALETTES.map((palette) => (
+					<li class="palette">
+						<h2>{palette.name}</h2>
+						<p class="note">{palette.note}</p>
+						<ul class="moods" aria-label="Mood">
+							{palette.mood.map((word) => <li>{word}</li>)}
+						</ul>
+						<div class="row">
+							{/* Frosted-glass dock; a soft glow of the palette's own colours sits behind it. */}
+							<div
+								class="dock"
+								style={`--g1:${palette.colors[0]};--g2:${palette.colors[Math.floor(palette.colors.length / 2)]};--g3:${palette.colors.at(-1)}`}
+							>
+								<ColorSwatches colors={palette.colors} />
+							</div>
+						</div>
+					</li>
+				))}
+			</ul>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main {
+		width: 960px;
+		padding-top: 2rem;
+	}
+	.back {
+		margin: 0 0 1.5rem;
+	}
+	/* Logo banner, then the intro text, then the options: one per row. */
+	.masthead {
+		display: grid;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+		text-align: center;
+	}
+	.lede {
+		margin: 0;
+		font-size: 17px;
+		line-height: 1.5;
+		color: rgb(var(--black));
+	}
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+	/* Engine and format choices on one row under the masthead, preview beside them. */
+	.pickers {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: center;
+		gap: 0.6rem 0.75rem;
+		margin-bottom: 2.75rem;
+	}
+	.picker {
+		margin: 0;
+		padding: 0.3rem 0.5rem 0.4rem;
+		border: 1px solid rgba(0, 255, 136, 0.18);
+		border-radius: 14px;
+		background: rgba(0, 255, 136, 0.03);
+	}
+	.picker legend {
+		padding: 0 0.4rem;
+		font-size: 11px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: rgba(0, 255, 136, 0.65);
+	}
+	.options {
+		display: flex;
+		flex-wrap: wrap;
+	}
+	.preview {
+		flex-basis: 100%;
+		text-align: center;
+		margin: 0.2rem 0 0;
+		font-size: 13px;
+		color: rgb(var(--gray));
+	}
+	.preview code {
+		padding: 0.1rem 0.45rem;
+		font-family: inherit;
+		font-size: 13px;
+		color: #00ff88;
+		background: rgba(0, 255, 136, 0.08);
+		border-radius: 6px;
+	}
+	/* The part that actually gets copied: pink neon glow. */
+	.preview :global(.value) {
+		color: #ff7fe3;
+		text-shadow: 0 0 6px rgba(255, 79, 216, 0.9), 0 0 14px rgba(168, 85, 255, 0.55);
+	}
+
+	/* Two palettes per row; no card behind them, just the glass dock. */
+	.palettes {
+		list-style: none;
+		margin: 0 0 4rem;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2.25rem 2rem;
+	}
+	.palette {
+		min-width: 0;
+	}
+	.moods {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin: 0.45rem 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.moods li {
+		padding: 0.05rem 0.5rem;
+		font-size: 11.5px;
+		color: rgb(var(--gray-dark));
+		background: rgba(255, 255, 255, 0.06);
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		border-radius: 999px;
+	}
+	h2 {
+		margin: 0;
+		font-size: 19px;
+	}
+	.note {
+		margin: 0.15rem 0 0;
+		font-size: 14px;
+		color: rgb(var(--gray));
+	}
+	/* Room above for the swelling chips and their tooltip. */
+	.row {
+		padding: 0.85rem 1rem 0.25rem 0.25rem;
+	}
+	.dock {
+		position: relative;
+		isolation: isolate;
+		display: inline-flex;
+		padding: 11px 20px 11px 12px;
+		border-radius: 19px; /* concentric with the swatch corners (12px + ~7px gap) */
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		box-shadow:
+			inset 0 1px 0 rgba(255, 255, 255, 0.12),
+			0 18px 40px -18px rgba(0, 0, 0, 0.9);
+		-webkit-backdrop-filter: blur(18px) saturate(1.6);
+		backdrop-filter: blur(18px) saturate(1.6);
+	}
+	/* Colour glow behind the glass, so the frosting has something to blur. */
+	.dock::before {
+		content: '';
+		position: absolute;
+		inset: 8px 10%;
+		z-index: -1;
+		border-radius: inherit;
+		background:
+			radial-gradient(60% 120% at 15% 50%, var(--g1), transparent 70%),
+			radial-gradient(60% 120% at 50% 60%, var(--g2), transparent 70%),
+			radial-gradient(60% 120% at 85% 50%, var(--g3), transparent 70%);
+		filter: blur(26px);
+		opacity: 0.32;
+		pointer-events: none;
+	}
+	@media (max-width: 720px) {
+		.palettes {
+			grid-template-columns: 1fr;
+		}
+	}
+	@media (max-width: 480px) {
+		.row {
+			padding-top: 0.75rem;
+		}
+		.dock {
+			padding: 10px 18px 10px 11px;
+			border-radius: 19px;
+		}
+	}
+</style>
+
+<script>
+	// ---- Colour value in each engine / format ----
+	type Engine = 'web' | 'unity' | 'godot' | 'unreal';
+	type Format = 'hex' | 'rgb' | 'float';
+
+	const channels = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+	// sRGB 0–255 -> linear 0–1 (what Unreal's FLinearColor expects).
+	const toLinear = (v: number) => {
+		const c = v / 255;
+		return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+	};
+	const f3 = (v: number) => v.toFixed(3);
+
+	// Each value is shown inside an example line of code (pre + value + post);
+	// only the value itself is copied.
+	const describe = (hex: string, engine: Engine, format: Format) => {
+		const [r, g, b] = channels(hex);
+		const floats = engine === 'unreal' ? [r, g, b].map(toLinear) : [r / 255, g / 255, b / 255];
+		const rgb = `${r}, ${g}, ${b}`;
+		const flt = (suffix: string, sep = ', ') => floats.map((v) => f3(v) + suffix).join(sep);
+		const parts: Record<Engine, Record<Format, [string, string, string]>> = {
+			web: {
+				hex: ['color: ', hex, ';'],
+				rgb: ['rgb(', rgb, ')'],
+				float: ['color(srgb ', flt('', ' '), ')'],
+			},
+			unity: {
+				hex: ['ColorUtility.TryParseHtmlString("', hex, '", out color)'],
+				rgb: ['new Color32(', rgb, ', 255)'],
+				float: ['new Color(', flt('f'), ')'],
+			},
+			godot: {
+				hex: ['Color("', hex, '")'],
+				rgb: ['Color8(', rgb, ')'],
+				float: ['Color(', flt(''), ')'],
+			},
+			unreal: {
+				hex: ['FColor::FromHex(TEXT("', hex.slice(1), '"))'],
+				rgb: ['FColor(', rgb, ')'],
+				float: ['FLinearColor(', flt('f'), ')'],
+			},
+		};
+		const [pre, value, post] = parts[engine][format];
+		return { pre, value, post };
+	};
+
+	const picked = (name: string) => document.querySelector<HTMLInputElement>(`input[name="${name}"]:checked`)!.value;
+
+	const apply = () => {
+		const engine = picked('engine') as Engine;
+		const format = picked('format') as Format;
+		document.querySelectorAll<HTMLElement>('[data-swatches] .swatch').forEach((swatch) => {
+			const { value } = describe(swatch.dataset.color!, engine, format);
+			swatch.dataset.label = value;
+			swatch.dataset.copy = value;
+			swatch.setAttribute('aria-label', `Copy ${value}`);
+		});
+		const first = document.querySelector<HTMLElement>('[data-swatches] .swatch');
+		const preview = document.querySelector<HTMLElement>('[data-preview]');
+		if (first && preview) {
+			const { pre, value, post } = describe(first.dataset.color!, engine, format);
+			const value_ = Object.assign(document.createElement('span'), { className: 'value', textContent: value });
+			preview.replaceChildren(pre, value_, post);
+		}
+	};
+
+	// Every visit starts on Web + 0–255.
+	document.querySelectorAll('input[name="engine"], input[name="format"]').forEach((input) => input.addEventListener('change', apply));
+	apply();
+
+</script>

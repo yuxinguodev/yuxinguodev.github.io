@@ -1,0 +1,219 @@
+---
+import BaseHead from '../../components/BaseHead.astro';
+import { Font } from 'astro:assets';
+import GaletteBadge from '../../components/GaletteBadge.astro';
+import Footer from '../../components/Footer.astro';
+import GradientCover from '../../components/GradientCover.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+import { TOOLS } from '../../data/tools';
+
+const tools = TOOLS;
+// Fill the grid up to six cards (two rows of three) with "Coming soon" placeholders.
+const PLACEHOLDERS = Math.max(0, 6 - tools.length);
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Tools | ${SITE_TITLE}`} description="Small tools I build for games and game development." />
+		<Font cssVariable="--font-display" />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<div class="intro">
+				<p class="kicker" lang="ja">道具</p>
+				<h1 class="page-title">Tools.</h1>
+				<p class="page-sub">Small tools I build for games and game development</p>
+			</div>
+
+			<section>
+				<ul class="cards">
+					{tools.map((tool) => (
+						<li>
+							<a class="card" href={tool.href}>
+								<span class="cover cover--galette">
+									<GaletteBadge variant="card" />
+								</span>
+								<span class="text">
+									<span class="card-title">{tool.title}</span>
+									<span class="tag">{tool.tag}</span>
+									<span class="note">{tool.note}</span>
+								</span>
+							</a>
+						</li>
+					))}
+					{Array.from({ length: PLACEHOLDERS }, (_, i) => (
+						<li class="soon">
+							<div class="card">
+								<span class="cover"><GradientCover seed={`tool-${tools.length + i}`} /></span>
+								<span class="text">
+									<span class="card-title">Coming soon</span>
+									<span class="note">The next tool will show up here.</span>
+								</span>
+							</div>
+						</li>
+					))}
+				</ul>
+			</section>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main {
+		width: 960px;
+		padding-top: 2rem;
+	}
+	.intro {
+		margin-bottom: 3rem;
+		text-align: center;
+	}
+	/* Small Japanese neon label above the title, same as the Articles page. */
+	.kicker {
+		margin: 0 0 0.35rem;
+		font-family: "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Meiryo", "Noto Sans JP", sans-serif;
+		font-size: 15px;
+		font-weight: 700;
+		letter-spacing: 0.6em;
+		padding-left: 0.6em; /* balance the trailing letter-spacing when centred */
+		color: #ff7fe3;
+		text-shadow: 0 0 6px rgba(255, 79, 216, 0.9), 0 0 16px rgba(168, 85, 255, 0.6);
+	}
+	.page-title {
+		margin: 0 0 0.25rem;
+		font-size: 52px;
+	}
+	.page-sub {
+		margin: 0;
+		font-size: 15px;
+		color: rgb(var(--gray));
+	}
+	section {
+		margin-bottom: 4rem;
+	}
+
+	/* Three across: each tool is a frosted-glass card with a square cover and its text. */
+	.cards {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 1.5rem;
+	}
+	.cards li {
+		display: flex;
+	}
+	.card {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		padding: 10px;
+		color: inherit;
+		text-decoration: none;
+		background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		border-radius: 20px;
+		box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+		-webkit-backdrop-filter: blur(16px) saturate(1.5);
+		backdrop-filter: blur(16px) saturate(1.5);
+		transition: border-color 0.2s;
+	}
+	a.card:hover {
+		border-color: rgba(255, 255, 255, 0.22);
+	}
+	.cover {
+		display: block;
+		aspect-ratio: 1;
+		overflow: hidden;
+		border-radius: 12px;
+		background: #121212;
+	}
+	.soon .cover :global(.gradient-cover) {
+		opacity: 0.45;
+		filter: saturate(0.7);
+	}
+	.text {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.85rem 0.4rem 0.35rem;
+	}
+	.card-title {
+		flex-basis: 100%;
+		font-size: 18px;
+		font-weight: 700;
+		color: rgb(var(--black));
+	}
+	.soon .card-title {
+		color: rgb(var(--gray));
+	}
+	.tag {
+		padding: 0.1rem 0.55rem;
+		font-size: 12px;
+		color: rgb(var(--gray-dark));
+		background: var(--surface-raised);
+		border-radius: 999px;
+	}
+	.note {
+		font-size: 14px;
+		line-height: 1.45;
+		color: rgb(var(--gray));
+	}
+
+	/* Galette cover: the logo badge fills the square and is its frame. */
+	.cover--galette {
+		background: none;
+		transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.cover--galette :global(.screen) {
+		transition: border-color 0.2s;
+	}
+	/* Hover: the badge lifts and brightens, the dots hop in turn and the bars slide in. */
+	.card:hover .cover--galette {
+		transform: translateY(-4px);
+	}
+	.card:hover .cover--galette :global(.screen) {
+		border-color: #fff;
+	}
+	.card:hover .cover--galette :global(.dots i) {
+		animation: hop 0.55s cubic-bezier(0.3, 0.7, 0.4, 1.4);
+	}
+	.card:hover .cover--galette :global(.dots i:nth-child(2)) { animation-delay: 0.06s; }
+	.card:hover .cover--galette :global(.dots i:nth-child(3)) { animation-delay: 0.12s; }
+	.card:hover .cover--galette :global(.dots i:nth-child(4)) { animation-delay: 0.18s; }
+	.card:hover .cover--galette :global(.dots i:nth-child(5)) { animation-delay: 0.24s; }
+	.cover--galette :global(.bars) {
+		transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.card:hover .cover--galette :global(.bars) {
+		transform: translateX(3%);
+	}
+	@keyframes hop {
+		0%, 100% { transform: translateY(0); }
+		40% { transform: translateY(-45%); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.cover--galette,
+		.cover--galette :global(.bars) { transition: none; }
+		.card:hover .cover--galette { transform: none; }
+		.card:hover .cover--galette :global(.dots i) { animation: none; }
+		.card:hover .cover--galette :global(.bars) { transform: none; }
+	}
+
+	@media (max-width: 760px) {
+		.cards {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 1rem;
+		}
+	}
+	@media (max-width: 480px) {
+		.cards {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

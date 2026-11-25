@@ -27,5 +27,14 @@ export default defineConfig({
 			styles: ['normal'],
 			fallbacks: ['cursive'],
 		},
+		{
+			// Rounded heavy display face, only used for the Galette logo.
+			provider: fontProviders.google(),
+			name: 'Fredoka',
+			cssVariable: '--font-display',
+			weights: [700],
+			styles: ['normal'],
+			fallbacks: ['Arial Rounded MT Bold', 'sans-serif'],
+		},
 	],
 });

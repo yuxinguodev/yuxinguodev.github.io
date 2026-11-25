@@ -11,6 +11,7 @@ import AsciiParticles from './AsciiParticles.astro';
 			{ label: 'Home', href: '/' },
 			{ label: 'Projects', href: '/projects' },
 			{ label: 'Articles', href: '/blog' },
+			{ label: 'Tools', href: '/tools' },
 			{ label: 'About', href: '/about' },
 		]}
 	/>
@@ -43,6 +44,7 @@ import AsciiParticles from './AsciiParticles.astro';
 		margin: 0 auto;
 		padding: 1rem 1.5rem;
 		pointer-events: none; /* only the visible controls take clicks */
+		overflow-x: clip; /* the nav canvas has a wide margin; keep it from widening phone pages */
 	}
 	/* :global so it also reaches child components like GooeyNav (scoped styles would skip them). */
 	header > :global(*) {

@@ -1,0 +1,167 @@
+---
+// "Galette" (Game Palette) logo: a rounded cream wordmark with a row of
+// colour dots above and slanted colour bars below, in a cream-framed badge.
+const DOTS = ['#ee86ae', '#f2662a', '#f8c62e', '#8193c8', '#8d5cc0'];
+const BARS = ['#3f9152', '#4c60d0', '#f8c62e', '#e2344f', '#2de2ff', '#f2662a', '#8d5cc0'];
+
+interface Props {
+	// 'card': fills its box and scales with its width (used as a cover image).
+	variant?: 'header' | 'card';
+}
+
+const { variant = 'header' } = Astro.props;
+const card = variant === 'card';
+---
+
+<div
+	class:list={['screen', { card }]}
+	role={card ? undefined : 'img'}
+	aria-label={card ? undefined : 'Galette, Game Palette'}
+	aria-hidden={card ? 'true' : undefined}
+>
+	<div class="logo">
+		<span class="dots" aria-hidden="true">
+			{DOTS.map((color) => <i style={`--c:${color}`}></i>)}
+		</span>
+		<span class="name" aria-hidden="true">GALETTE</span>
+		<span class="bars" aria-hidden="true">
+			{BARS.map((color, i) => <i style={`--c:${color};flex-grow:${i + 1}`}></i>)}
+		</span>
+	</div>
+	<p class="tag" aria-hidden="true">
+		<span>GAME · PALETTE</span>
+	</p>
+</div>
+
+<style>
+	.screen {
+		--cream: #efe8d6;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		overflow: hidden;
+		padding: 1.4rem 1.5rem 1.1rem;
+		border-radius: 26px;
+		background: #0a0a0a;
+		border: 3px solid var(--cream);
+	}
+
+	.logo {
+		display: inline-grid;
+		justify-items: stretch;
+	}
+	.dots {
+		justify-self: end;
+		display: flex;
+		gap: 0.9rem;
+		margin: 0 0.4rem -0.35rem 0;
+	}
+	.dots i {
+		display: block;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: var(--c);
+	}
+	.name {
+		font-family: var(--font-display), 'Arial Rounded MT Bold', sans-serif;
+		font-weight: 700;
+		font-size: 120px;
+		line-height: 1;
+		letter-spacing: 0.02em;
+		color: var(--cream);
+	}
+	.bars {
+		display: flex;
+		gap: 14px;
+		margin-top: 0.4rem;
+		padding: 0 0.4rem 0 0.9rem;
+	}
+	.bars i {
+		display: block;
+		height: 26px;
+		border-radius: 3px;
+		background: var(--c);
+		transform: skewX(-22deg);
+	}
+	.tag {
+		display: flex;
+		gap: 1.2rem;
+		margin: 0.75rem 0 0;
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.4em;
+		color: var(--cream);
+		opacity: 0.75;
+	}
+
+	/* Header hover (same motion as the Tools card): the badge lifts and brightens,
+	   the dots hop one after another and the bars slide in. The card variant
+	   gets this from its card's hover on the Tools page instead. */
+	.screen:not(.card) {
+		transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s;
+	}
+	.screen:not(.card):hover {
+		transform: translateY(-5px);
+		border-color: #fff;
+	}
+	.screen:not(.card):hover .dots i {
+		animation: hop 0.55s cubic-bezier(0.3, 0.7, 0.4, 1.4);
+	}
+	.screen:not(.card):hover .dots i:nth-child(2) { animation-delay: 0.06s; }
+	.screen:not(.card):hover .dots i:nth-child(3) { animation-delay: 0.12s; }
+	.screen:not(.card):hover .dots i:nth-child(4) { animation-delay: 0.18s; }
+	.screen:not(.card):hover .dots i:nth-child(5) { animation-delay: 0.24s; }
+	.screen:not(.card) .bars {
+		transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.screen:not(.card):hover .bars {
+		transform: translateX(3%);
+	}
+	@keyframes hop {
+		0%, 100% { transform: translateY(0); }
+		40% { transform: translateY(-45%); }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.screen:not(.card),
+		.screen:not(.card) .bars { transition: none; }
+		.screen:not(.card):hover,
+		.screen:not(.card):hover .bars { transform: none; }
+		.screen:not(.card):hover .dots i { animation: none; }
+	}
+
+	/* Card cover: fill the box, size everything from the box width. */
+	.screen.card {
+		container-type: inline-size;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		justify-content: center;
+		padding: 0;
+		border-radius: inherit;
+	}
+	.card .name { font-size: 15.5cqw; }
+	.card .dots { gap: 2cqw; margin: 0 1cqw -0.8cqw 0; }
+	.card .dots i { width: 4.4cqw; height: 4.4cqw; }
+	.card .bars { gap: 2.2cqw; margin-top: 1cqw; padding: 0 1cqw 0 2cqw; }
+	.card .bars i { height: 3.8cqw; border-radius: 2px; }
+	.card .tag { margin-top: 2.6cqw; font-size: max(9px, 2.3cqw); letter-spacing: 0.4em; flex-direction: row; }
+
+	@media (max-width: 760px) {
+		.screen:not(.card) .name { font-size: 84px; }
+		.screen:not(.card) .dots i { width: 22px; height: 22px; }
+		.screen:not(.card) .dots { gap: 0.6rem; }
+		.screen:not(.card) .bars { gap: 10px; }
+		.screen:not(.card) .bars i { height: 18px; }
+	}
+	@media (max-width: 480px) {
+		.screen:not(.card) { padding: 1rem 1rem 0.85rem; border-radius: 20px; }
+		.screen:not(.card) .name { font-size: 56px; }
+		.screen:not(.card) .dots i { width: 15px; height: 15px; }
+		.screen:not(.card) .dots { gap: 0.4rem; margin-bottom: -0.2rem; }
+		.screen:not(.card) .bars { gap: 6px; margin-top: 0.25rem; }
+		.screen:not(.card) .bars i { height: 12px; }
+		.screen:not(.card) .tag { flex-direction: column; align-items: center; gap: 0.3rem; font-size: 10px; letter-spacing: 0.3em; margin-top: 1rem; }
+	}
+</style>

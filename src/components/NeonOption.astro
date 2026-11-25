@@ -1,0 +1,145 @@
+---
+// A glowing neon check option. Rendered as a radio button, so options that
+// share a `name` act as a single-choice group.
+interface Props {
+	name: string;
+	value: string;
+	label: string;
+	checked?: boolean;
+}
+
+const { name, value, label, checked = false } = Astro.props;
+---
+
+<label class="neon-option">
+	<input type="radio" name={name} value={value} checked={checked} />
+	<span class="checkmark" aria-hidden="true">
+		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+			<path d="M20 6 9 17l-5-5" />
+		</svg>
+	</span>
+	<span class="label">{label}</span>
+</label>
+
+<style>
+	.neon-option {
+		--size: 18px;
+		--color: #00ff88;
+		--shadow: rgba(0, 255, 136, 0.3);
+		--edge: rgba(0, 255, 136, 0.7);
+		--spring: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+		position: relative;
+		display: flex;
+		align-items: center;
+		padding: 4px 5px;
+		cursor: pointer;
+		user-select: none;
+	}
+	.neon-option input {
+		position: absolute;
+		width: 0;
+		height: 0;
+		opacity: 0;
+	}
+	.checkmark {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: var(--size);
+		height: var(--size);
+		overflow: hidden;
+		background: rgba(0, 0, 0, 0.2);
+		border: 2px solid var(--edge);
+		border-radius: 7px;
+		box-shadow: 0 0 15px var(--shadow);
+		transition: all 0.4s var(--spring);
+	}
+	/* Gradient fill that spins in when chosen. */
+	.checkmark::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(45deg, var(--color), #00ffcc);
+		opacity: 0;
+		transform: scale(0) rotate(-45deg);
+		transition: all 0.4s var(--spring);
+	}
+	.checkmark svg {
+		z-index: 1;
+		width: 0;
+		height: 0;
+		color: #1a1a1a;
+		filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+		transition: all 0.4s var(--spring);
+	}
+	input:checked ~ .checkmark {
+		animation: pulse 1s var(--spring);
+	}
+	input:checked ~ .checkmark::before {
+		opacity: 1;
+		transform: scale(1) rotate(0);
+	}
+	input:checked ~ .checkmark svg {
+		width: 12px;
+		height: 12px;
+		transform: rotate(360deg);
+	}
+	input:focus-visible ~ .checkmark {
+		outline: 2px solid #fff;
+		outline-offset: 3px;
+	}
+	.label {
+		margin-left: 6px;
+		font-size: 13px;
+		color: var(--color);
+		white-space: nowrap;
+		text-shadow: 0 0 10px var(--shadow);
+		opacity: 0.75;
+		transition: all 0.3s;
+	}
+	input:checked ~ .label {
+		opacity: 1;
+	}
+
+	@media (hover: hover) {
+		.neon-option:hover .checkmark {
+			border-color: var(--color);
+			transform: scale(1.1);
+			box-shadow:
+				0 0 20px var(--shadow),
+				0 0 40px var(--shadow),
+				inset 0 0 10px var(--shadow);
+		}
+		.neon-option:hover .label {
+			opacity: 1;
+			transform: translateX(4px);
+		}
+	}
+
+	@keyframes pulse {
+		0% {
+			transform: scale(1);
+			box-shadow: 0 0 20px var(--shadow);
+		}
+		50% {
+			transform: scale(0.9);
+			box-shadow:
+				0 0 30px var(--shadow),
+				0 0 50px var(--shadow);
+		}
+		100% {
+			transform: scale(1);
+			box-shadow: 0 0 20px var(--shadow);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.neon-option *,
+		.neon-option *::before {
+			animation: none !important;
+			transition: none !important;
+		}
+	}
+</style>
