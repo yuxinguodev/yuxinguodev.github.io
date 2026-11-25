@@ -1,0 +1,129 @@
+---
+import ArrowLink from '../../components/ArrowLink.astro';
+import BaseHead from '../../components/BaseHead.astro';
+import Footer from '../../components/Footer.astro';
+import Header from '../../components/Header.astro';
+import { SITE_TITLE } from '../../consts';
+import FuzzBanner from '../../components/FuzzBanner.astro';
+import FuzzEditorWireframe from '../../components/FuzzEditorWireframe.astro';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={`Fuzz Pedal | Tools | ${SITE_TITLE}`} description="Fuzz Pedal: a new tool, coming soon." />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<p class="back"><ArrowLink href="/tools/" back>All tools</ArrowLink></p>
+			<FuzzBanner />
+			<FuzzEditorWireframe />
+			<div class="placeholder">
+				<h1 class="visually-hidden">Fuzz Pedal</h1>
+				<p class="soon">Coming soon</p>
+				<p class="note">This tool is still in the workshop. Check back later.</p>
+			</div>
+
+			<!-- About / credits, in the spirit of jsfxr's own about page. -->
+			<footer class="about">
+				<h2>about Fuzz Pedal</h2>
+				<p class="lede">
+					Fuzz Pedal is an online 8-bit sound maker for retro game effects. All you need is a web browser:
+					pick a preset, push the sliders, then download a WAV for your game. It is built on{' '}
+					<a href="https://sfxr.me/" target="_blank" rel="noopener">jsfxr</a>, the JavaScript port of the original{' '}
+					<a href="https://www.drpetter.se/project_sfxr.html" target="_blank" rel="noopener">sfxr</a> by DrPetter.
+				</p>
+				<p class="credits">
+					(Based on{' '}<a href="https://sfxr.me/" target="_blank" rel="noopener">jsfxr</a>, a port of{' '}
+					<a href="https://www.drpetter.se/project_sfxr.html" target="_blank" rel="noopener">sfxr</a> by DrPetter)<br />
+					jsfxr © 2011 Eric Fredricksen<br />
+					With contributions from Chris McCormick<br />
+					Fuzz Pedal interface © 2026 Yuxin Guo
+				</p>
+				<p><a href="https://github.com/chr15m/jsfxr" target="_blank" rel="noopener">(jsfxr source code)</a></p>
+				<p class="tip">Tip: export a <code>.wav</code> and drop it straight into Unity, Godot or Unreal.</p>
+			</footer>
+		</main>
+		<Footer />
+	</body>
+</html>
+
+<style>
+	main {
+		width: 960px;
+		padding-top: 2rem;
+	}
+	.back {
+		margin: 0 0 1.5rem;
+	}
+	.placeholder {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 1.75rem 0 2rem;
+		text-align: center;
+	}
+	/* The banner shows the title; keep a real heading for screen readers. */
+	.visually-hidden {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+	.soon {
+		margin: 0;
+		padding: 0.15rem 0.8rem;
+		font-size: 13px;
+		font-weight: 500;
+		color: #f2b84b;
+		background: rgba(239, 159, 39, 0.15);
+		border: 1px solid rgba(239, 159, 39, 0.4);
+		border-radius: 999px;
+	}
+	.note {
+		margin: 1rem 0 0;
+		font-size: 15px;
+		color: rgb(var(--gray));
+	}
+
+	/* About / credits footer. */
+	.about {
+		margin: 1rem auto 5rem;
+		padding-top: 2.5rem;
+		max-width: 760px;
+		text-align: center;
+		border-top: 1px solid var(--border);
+	}
+	.about h2 {
+		margin: 0 0 1.25rem;
+		font-size: 34px;
+	}
+	.about p {
+		margin: 0 0 1.25rem;
+		font-size: 15px;
+		line-height: 1.6;
+		color: rgb(var(--gray-dark));
+	}
+	.about .credits {
+		color: rgb(var(--gray));
+	}
+	.about a {
+		color: #ff7aa8;
+		text-decoration: none;
+	}
+	.about a:hover {
+		text-decoration: underline;
+	}
+	.about .tip {
+		color: rgb(var(--gray));
+	}
+	.about code {
+		padding: 0.05rem 0.35rem;
+		font-size: 13px;
+		background: var(--surface-raised);
+		border-radius: 4px;
+	}
+</style>

@@ -1,0 +1,60 @@
+---
+// Fuzz Pedal app icon, in the style of its own header (not Galette's): a dark
+// stage-coloured rounded square with no frame, two faint spotlight beams and a
+// big italic pixel "F" — hot pink on top, dark magenta below, dripping.
+interface Props {
+	size?: number;
+}
+
+const { size = 72 } = Astro.props;
+
+const F = ['######', '######', '##....', '#####.', '#####.', '##....', '##....'];
+const CELL = 13;
+const LEFT = 46;
+const TOP = 42;
+const SHEAR = 4;
+const colour = (r: number) => (r < 4 ? '#ff3a6e' : r < 6 ? '#c4237a' : '#8a1a6a');
+let pixels = '';
+F.forEach((row, r) =>
+	[...row].forEach((p, c) => {
+		if (p === '#') pixels += `<rect x="${LEFT + c * CELL + (6 - r) * SHEAR}" y="${TOP + r * CELL}" width="${CELL}" height="${CELL}" fill="${colour(r)}"/>`;
+	}),
+);
+const bottom = TOP + 7 * CELL;
+---
+
+<svg class="fuzz-icon" viewBox="0 0 200 200" width={size} height={size} aria-hidden="true" shape-rendering="crispEdges">
+	<defs>
+		<clipPath id="fuzz-icon-clip"><rect x="10" y="10" width="180" height="180" rx="42" /></clipPath>
+		<linearGradient id="fuzz-icon-beam" x1="0" y1="0" x2="0" y2="1">
+			<stop offset="0" stop-color="#fff2d8" stop-opacity="0.13" />
+			<stop offset="1" stop-color="#ff5c8a" stop-opacity="0" />
+		</linearGradient>
+	</defs>
+	<rect x="10" y="10" width="180" height="180" rx="42" fill="#120e22" />
+	<g clip-path="url(#fuzz-icon-clip)">
+		<polygon points="30,14 52,14 140,170 70,170" fill="url(#fuzz-icon-beam)" />
+		<polygon points="170,14 148,14 60,170 130,170" fill="url(#fuzz-icon-beam)" />
+		<Fragment set:html={pixels} />
+		<!-- drips under the F -->
+		<g fill="#8a1a6a">
+			<rect x={LEFT} y={bottom} width={CELL} height="24" />
+			<rect x={LEFT + 3} y={bottom + 24} width="7" height="7" />
+			<rect x={LEFT + 3} y={bottom + 38} width="7" height="7" />
+			<rect x={LEFT + CELL} y={bottom} width={CELL} height="14" />
+		</g>
+		<!-- glitch dashes -->
+		<g fill="#f4f1ff" opacity="0.9">
+			<rect x="132" y="66" width="20" height="6" />
+			<rect x="156" y="66" width="8" height="6" />
+			<rect x="38" y="112" width="12" height="6" />
+		</g>
+	</g>
+</svg>
+
+<style>
+	.fuzz-icon {
+		display: block;
+		flex-shrink: 0;
+	}
+</style>

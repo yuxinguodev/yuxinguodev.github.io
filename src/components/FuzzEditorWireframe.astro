@@ -1,0 +1,425 @@
+---
+// Layout preview (wireframe) of the Fuzz Pedal sound-effect editor panel.
+// Static boxes and lines only: nothing here is wired up yet.
+
+const presetsLeft = ['Pickup/coin', 'Laser/shoot', 'Explosion', 'Powerup', 'Hit/hurt'];
+const presetsRight = ['Jump', 'Click', 'Blip/select', 'Synth', 'Tone'];
+const waves = ['Square', 'Sawtooth', 'Sine', 'Noise'];
+
+type Slider = { label: string; value: string; pos: number }; // pos: knob position 0..1
+type Group = { title: string; sliders: Slider[] };
+
+// Each column holds one or two groups, top to bottom.
+const columns: Group[][] = [
+	[
+		{
+			title: 'Envelope',
+			sliders: [
+				{ label: 'Attack time', value: '0.04444 sec', pos: 0.2 },
+				{ label: 'Sustain time', value: '0.08446 sec', pos: 0.2 },
+				{ label: 'Sustain punch', value: '+17.80%', pos: 0.2 },
+				{ label: 'Decay time', value: '0.06476 sec', pos: 0.2 },
+			],
+		},
+	],
+	[
+		{
+			title: 'Frequency',
+			sliders: [
+				{ label: 'Start frequency', value: '868.0 Hz', pos: 0.2 },
+				{ label: 'Min freq. cutoff', value: '3.528 Hz', pos: 0.2 },
+				{ label: 'Slide', value: '-0.0006362 8va/sec', pos: 0.2 },
+				{ label: 'Delta slide', value: '-5.144e-7 8va/s²', pos: 0.2 },
+			],
+		},
+	],
+	[
+		{
+			title: 'Vibrato',
+			sliders: [
+				{ label: 'Depth', value: '± 45.30%', pos: 0.2 },
+				{ label: 'Speed', value: 'OFF', pos: 0.2 },
+			],
+		},
+		{
+			title: 'Arpeggiation',
+			sliders: [
+				{ label: 'Frequency mult', value: '× 1.727', pos: 0.2 },
+				{ label: 'Change speed', value: '0.1607 sec', pos: 0.2 },
+			],
+		},
+	],
+	[
+		{
+			title: 'Duty Cycle',
+			sliders: [
+				{ label: 'Duty cycle', value: '9.850%', pos: 0.2 },
+				{ label: 'Sweep', value: '0.000%/sec', pos: 0.2 },
+			],
+		},
+		{
+			title: 'Flanger',
+			sliders: [
+				{ label: 'Offset', value: '-1.446 msec', pos: 0.2 },
+				{ label: 'Sweep', value: '257.0 msec/sec', pos: 0.2 },
+			],
+		},
+	],
+	[
+		{
+			title: 'Low-Pass Filter',
+			sliders: [
+				{ label: 'Cutoff frequency', value: '16400 Hz', pos: 0.2 },
+				{ label: 'Cutoff sweep', value: '1.004 ^sec', pos: 0.2 },
+				{ label: 'Resonance', value: '45.00%', pos: 0.2 },
+			],
+		},
+		{
+			title: 'Retrigger',
+			sliders: [{ label: 'Rate', value: '416.0 Hz', pos: 0.2 }],
+		},
+	],
+	[
+		{
+			title: 'High-Pass Filter',
+			sliders: [
+				{ label: 'Cutoff frequency', value: 'OFF', pos: 0.2 },
+				{ label: 'Cutoff sweep', value: '2.394 ^sec', pos: 0.2 },
+			],
+		},
+	],
+];
+
+const rates = ['44k', '22k', '11k', '8k'];
+const sizes = ['16 bit', '8 bit'];
+---
+
+<section class="wire" aria-label="Sound effect editor (layout preview)">
+	<p class="tag">Layout preview · not wired up yet</p>
+
+	<!-- Presets | waveform display + gain | presets -->
+	<div class="top">
+		<div class="presets">
+			{presetsLeft.map((p) => <span class="box btn">{p}</span>)}
+		</div>
+		<div class="display-col">
+			<div class="box display">
+				<svg class="wave" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+					<path d="M0 60 L10 30 L16 92 L22 18 L28 100 L34 26 L40 88 L46 36 L52 78 L60 46 L68 70 L78 54 L90 64 L104 58 L130 60 L400 60" />
+				</svg>
+				<span class="display-label">Waveform display</span>
+				<span class="meta left">Samples: 38750</span>
+				<span class="meta right">Clipped: 0</span>
+			</div>
+			<div class="gain">
+				<span class="group-title small">Gain</span>
+				<span class="track" style="--pos: 0.2"><i></i></span>
+			</div>
+		</div>
+		<div class="presets">
+			{presetsRight.map((p) => <span class="box btn">{p}</span>)}
+		</div>
+	</div>
+
+	<!-- Waveform type -->
+	<div class="segmented waves">
+		{waves.map((w) => <span>{w}</span>)}
+	</div>
+
+	<!-- Parameter groups -->
+	<div class="params">
+		{columns.map((col) => (
+			<div class="col">
+				{col.map((g) => (
+					<div class="group">
+						<h3 class="group-title">{g.title}</h3>
+						{g.sliders.map((s) => (
+							<div class="slider">
+								<span class="track" style={`--pos: ${s.pos}`}><i></i></span>
+								<span class="slider-text">
+									<span class="slider-label">{s.label}</span>
+									<span class="slider-value">{s.value}</span>
+								</span>
+							</div>
+						))}
+					</div>
+				))}
+			</div>
+		))}
+	</div>
+
+	<!-- Output format -->
+	<div class="format">
+		<div class="format-item">
+			<span class="group-title">Sample Rate (Hz)</span>
+			<div class="segmented">{rates.map((r) => <span>{r}</span>)}</div>
+		</div>
+		<div class="format-item">
+			<span class="group-title">Sample size</span>
+			<div class="segmented">{sizes.map((r) => <span>{r}</span>)}</div>
+		</div>
+	</div>
+
+	<!-- Actions -->
+	<div class="actions">
+		<span class="box big">random</span>
+		<span class="box big play">PLAY</span>
+		<span class="box big">mutate</span>
+	</div>
+	<div class="download">
+		<span class="box big dl">Download<small>file size: 38kb</small></span>
+	</div>
+</section>
+
+<style>
+	.wire {
+		--line: rgba(239, 232, 214, 0.75);
+		--soft: rgba(239, 232, 214, 0.35);
+		--ink: #efe8d6;
+		margin: 2rem 0 0;
+		padding: 2rem 1.75rem 2.25rem;
+		color: var(--ink);
+		border: 1px dashed var(--soft);
+		border-radius: 18px;
+	}
+	.tag {
+		margin: 0 0 1.5rem;
+		font-size: 12px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		text-align: center;
+		color: rgb(var(--gray));
+	}
+	.box {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border: 2px solid var(--line);
+		border-radius: 6px;
+	}
+
+	/* Top row */
+	.top {
+		display: grid;
+		grid-template-columns: 130px minmax(0, 1fr) 130px;
+		gap: 1.25rem;
+		align-items: start;
+	}
+	.presets {
+		display: grid;
+		gap: 0.6rem;
+	}
+	.btn {
+		height: 36px;
+		font-size: 14px;
+	}
+	.display {
+		position: relative;
+		height: 216px;
+		border-width: 3px;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+	.wave {
+		position: absolute;
+		left: 0;
+		top: 30px;
+		width: 100%;
+		height: 120px;
+	}
+	.wave path {
+		fill: none;
+		stroke: var(--soft);
+		stroke-width: 2;
+		vector-effect: non-scaling-stroke;
+	}
+	.display-label {
+		font-size: 18px;
+		color: var(--ink);
+	}
+	.meta {
+		position: absolute;
+		bottom: 12px;
+		font-size: 13px;
+		color: var(--soft);
+	}
+	.meta.left { left: 16px; }
+	.meta.right { right: 16px; }
+	.gain {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: 0.9rem;
+	}
+	.gain .track {
+		width: 200px;
+	}
+
+	/* Segmented controls */
+	.segmented {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: 1fr;
+		border: 2px solid var(--line);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+	.segmented span {
+		padding: 0.5rem 0.9rem;
+		font-size: 14px;
+		text-align: center;
+		white-space: nowrap;
+	}
+	.segmented span + span {
+		border-left: 2px solid var(--line);
+	}
+	.waves {
+		width: min(100%, 520px);
+		margin: 1.5rem auto 2.25rem;
+	}
+
+	/* Parameter sliders */
+	.params {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 1.25rem 1rem;
+	}
+	.group + .group {
+		margin-top: 1.1rem;
+	}
+	.group-title {
+		display: block;
+		margin: 0 0 0.7rem;
+		font-size: 13.5px;
+		font-weight: 700;
+		white-space: nowrap; /* keep "High-Pass Filter" on one line so columns line up */
+		color: var(--ink);
+	}
+	.group-title.small {
+		margin: 0;
+		font-size: 14px;
+	}
+	.slider {
+		display: grid;
+		gap: 0.3rem;
+		margin-bottom: 0.85rem;
+	}
+	/* Track with a round knob at --pos. */
+	.track {
+		position: relative;
+		display: block;
+		height: 8px;
+		border: 2px solid var(--line);
+		border-radius: 999px;
+	}
+	.track i {
+		position: absolute;
+		top: 50%;
+		left: calc(var(--pos) * 100%);
+		width: 16px;
+		height: 16px;
+		border: 2px solid var(--line);
+		border-radius: 50%;
+		background: #0b0b0d;
+		transform: translate(-50%, -50%);
+	}
+	.slider-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.25;
+	}
+	.slider-label {
+		font-size: 12.5px;
+		font-weight: 500;
+	}
+	.slider-value {
+		font-size: 11px;
+		color: var(--soft);
+	}
+
+	/* Output format */
+	.format {
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 1.5rem 3rem;
+		margin: 2rem 0 0;
+	}
+	.format-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 240px;
+	}
+	.format-item .group-title {
+		margin: 0;
+	}
+	.format-item .segmented {
+		width: 100%;
+	}
+
+	/* Actions */
+	.actions {
+		display: flex;
+		justify-content: center;
+		gap: 1.25rem;
+		margin-top: 2.25rem;
+	}
+	.big {
+		height: 58px;
+		padding: 0 1.5rem;
+		min-width: 130px;
+		font-size: 19px;
+		font-weight: 700;
+		border-width: 3px;
+		border-radius: 8px;
+	}
+	.play {
+		min-width: 200px;
+	}
+	.download {
+		display: flex;
+		justify-content: center;
+		margin-top: 1.25rem;
+	}
+	.dl {
+		flex-direction: column;
+		min-width: 200px;
+		height: 64px;
+	}
+	.dl small {
+		font-size: 11px;
+		font-weight: 400;
+		color: var(--soft);
+	}
+
+	@media (max-width: 860px) {
+		.params {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (max-width: 600px) {
+		.wire {
+			padding: 1.25rem 1rem 1.5rem;
+		}
+		.top {
+			grid-template-columns: 1fr 1fr;
+		}
+		.display-col {
+			grid-column: 1 / -1;
+			grid-row: 1;
+		}
+		.params {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.actions {
+			flex-wrap: wrap;
+		}
+		.big {
+			min-width: 0;
+			flex: 1;
+		}
+	}
+</style>

@@ -15,6 +15,7 @@ import GradientCover from '../components/GradientCover.astro';
 import { TOOLS } from '../data/tools';
 import ArrowLink from '../components/ArrowLink.astro';
 import GaletteIcon from '../components/GaletteIcon.astro';
+import FuzzIcon from '../components/FuzzIcon.astro';
 import { Font } from 'astro:assets';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
@@ -217,7 +218,7 @@ const link = (value: string, prefix = '') => (value ? prefix + value : '#');
 					{TOOLS.slice(0, 4).map((tool) => (
 						<a class="tool" href={tool.href} title={tool.note}>
 							<span class="tool-icon">
-								{tool.href === '/tools/galette' ? <GaletteIcon /> : <span class="blank"><GradientCover seed={tool.title} /></span>}
+								{tool.id === 'galette' ? <GaletteIcon /> : <FuzzIcon />}
 							</span>
 							<span class="tool-name">{tool.title}</span>
 						</a>

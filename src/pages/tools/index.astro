@@ -2,6 +2,7 @@
 import BaseHead from '../../components/BaseHead.astro';
 import { Font } from 'astro:assets';
 import GaletteBadge from '../../components/GaletteBadge.astro';
+import FuzzBanner from '../../components/FuzzBanner.astro';
 import Footer from '../../components/Footer.astro';
 import GradientCover from '../../components/GradientCover.astro';
 import Header from '../../components/Header.astro';
@@ -33,9 +34,15 @@ const PLACEHOLDERS = Math.max(0, 6 - tools.length);
 					{tools.map((tool) => (
 						<li>
 							<a class="card" href={tool.href}>
-								<span class="cover cover--galette">
-									<GaletteBadge variant="card" />
-								</span>
+								{tool.id === 'galette' ? (
+									<span class="cover cover--galette">
+										<GaletteBadge variant="card" />
+									</span>
+								) : (
+									<span class="cover cover--fuzz">
+										<FuzzBanner variant="card" />
+									</span>
+								)}
 								<span class="text">
 									<span class="card-title">{tool.title}</span>
 									<span class="tag">{tool.tag}</span>
@@ -163,6 +170,16 @@ const PLACEHOLDERS = Math.max(0, 6 - tools.length);
 		font-size: 14px;
 		line-height: 1.45;
 		color: rgb(var(--gray));
+	}
+
+	/* Fuzz Pedal cover: the header scene cropped square around its title. */
+	.cover--fuzz {
+		background: #000;
+		border: 1px solid rgba(255, 255, 255, 0.06);
+		transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+	}
+	.card:hover .cover--fuzz {
+		transform: translateY(-4px);
 	}
 
 	/* Galette cover: the logo badge fills the square and is its frame. */
