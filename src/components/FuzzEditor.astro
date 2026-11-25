@@ -1,0 +1,682 @@
+---
+// Fuzz Pedal sound-effect editor, wired to jsfxr (see src/scripts/fuzz-engine.ts).
+// Layout follows Yuxin's panel design; styling is still the plain "wireframe" look.
+
+const presetsLeft = ['Pickup/coin', 'Laser/shoot', 'Explosion', 'Powerup', 'Hit/hurt'];
+const presetsRight = ['Jump', 'Click', 'Blip/select', 'Synth', 'Tone'];
+const waves = ['Square', 'Sawtooth', 'Sine', 'Noise'];
+
+type Slider = { label: string; param: string };
+type Group = { title: string; sliders: Slider[] };
+
+// Each column holds one or two groups, top to bottom. `param` is the jsfxr field.
+const columns: Group[][] = [
+	[
+		{
+			title: 'Envelope',
+			sliders: [
+				{ label: 'Attack time', param: 'p_env_attack' },
+				{ label: 'Sustain time', param: 'p_env_sustain' },
+				{ label: 'Sustain punch', param: 'p_env_punch' },
+				{ label: 'Decay time', param: 'p_env_decay' },
+			],
+		},
+	],
+	[
+		{
+			title: 'Frequency',
+			sliders: [
+				{ label: 'Start frequency', param: 'p_base_freq' },
+				{ label: 'Min freq. cutoff', param: 'p_freq_limit' },
+				{ label: 'Slide', param: 'p_freq_ramp' },
+				{ label: 'Delta slide', param: 'p_freq_dramp' },
+			],
+		},
+	],
+	[
+		{
+			title: 'Vibrato',
+			sliders: [
+				{ label: 'Depth', param: 'p_vib_strength' },
+				{ label: 'Speed', param: 'p_vib_speed' },
+			],
+		},
+		{
+			title: 'Arpeggiation',
+			sliders: [
+				{ label: 'Frequency mult', param: 'p_arp_mod' },
+				{ label: 'Change speed', param: 'p_arp_speed' },
+			],
+		},
+	],
+	[
+		{
+			title: 'Duty Cycle',
+			sliders: [
+				{ label: 'Duty cycle', param: 'p_duty' },
+				{ label: 'Sweep', param: 'p_duty_ramp' },
+			],
+		},
+		{
+			title: 'Flanger',
+			sliders: [
+				{ label: 'Offset', param: 'p_pha_offset' },
+				{ label: 'Sweep', param: 'p_pha_ramp' },
+			],
+		},
+	],
+	[
+		{
+			title: 'Low-Pass Filter',
+			sliders: [
+				{ label: 'Cutoff frequency', param: 'p_lpf_freq' },
+				{ label: 'Cutoff sweep', param: 'p_lpf_ramp' },
+				{ label: 'Resonance', param: 'p_lpf_resonance' },
+			],
+		},
+		{
+			title: 'Retrigger',
+			sliders: [{ label: 'Rate', param: 'p_repeat_speed' }],
+		},
+	],
+	[
+		{
+			title: 'High-Pass Filter',
+			sliders: [
+				{ label: 'Cutoff frequency', param: 'p_hpf_freq' },
+				{ label: 'Cutoff sweep', param: 'p_hpf_ramp' },
+			],
+		},
+	],
+];
+
+// jsfxr can only divide 44.1 kHz evenly, so the lowest rate is 5.5 kHz.
+const rates = [
+	{ label: '44k', value: 44100 },
+	{ label: '22k', value: 22050 },
+	{ label: '11k', value: 11025 },
+	{ label: '5.5k', value: 5512 },
+];
+const sizes = [
+	{ label: '16 bit', value: 16 },
+	{ label: '8 bit', value: 8 },
+];
+// Chinese labels for the EN / 中文 switch (LangToggle swaps any [data-zh]).
+const ZH: Record<string, string> = {
+	"Pickup/coin": "拾取/金币",
+	"Laser/shoot": "激光/射击",
+	"Explosion": "爆炸",
+	"Powerup": "强化",
+	"Hit/hurt": "受击",
+	"Jump": "跳跃",
+	"Click": "点击",
+	"Blip/select": "选择音",
+	"Synth": "合成器",
+	"Tone": "纯音",
+	"Square": "方波",
+	"Sawtooth": "锯齿波",
+	"Sine": "正弦波",
+	"Noise": "噪声",
+	"Envelope": "包络",
+	"Frequency": "频率",
+	"Vibrato": "颤音",
+	"Arpeggiation": "琶音",
+	"Duty Cycle": "占空比",
+	"Flanger": "镶边",
+	"Low-Pass Filter": "低通滤波",
+	"Retrigger": "重触发",
+	"High-Pass Filter": "高通滤波",
+	"Attack time": "起音时间",
+	"Sustain time": "持续时间",
+	"Sustain punch": "持续冲击",
+	"Decay time": "衰减时间",
+	"Start frequency": "起始频率",
+	"Min freq. cutoff": "最低频率",
+	"Slide": "滑音",
+	"Delta slide": "滑音加速",
+	"Depth": "深度",
+	"Speed": "速度",
+	"Frequency mult": "频率倍数",
+	"Change speed": "变化速度",
+	"Duty cycle": "占空比",
+	"Sweep": "扫动",
+	"Offset": "偏移",
+	"Cutoff frequency": "截止频率",
+	"Cutoff sweep": "截止扫动",
+	"Resonance": "共振",
+	"Rate": "速率"
+};
+const zh = (en: string) => ZH[en] ?? en;
+const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_pha_offset', 'p_pha_ramp', 'p_lpf_ramp', 'p_hpf_ramp'];
+---
+
+<section class="wire" data-fuzz-editor aria-label="Sound effect editor">
+	<!-- Presets | waveform display + gain | presets -->
+	<div class="top">
+		<div class="presets">
+			{presetsLeft.map((p) => <button class="box btn" type="button" data-preset={p} data-zh={zh(p)}>{p}</button>)}
+		</div>
+		<div class="display-col">
+			<div class="box display">
+				<canvas class="wave" width="800" height="240" aria-label="Waveform"></canvas>
+				<span class="meta left"><span data-zh="采样数:">Samples:</span> <b data-samples>0</b></span>
+				<span class="meta right"><span data-zh="削波:">Clipped:</span> <b data-clipped>0</b></span>
+			</div>
+			<label class="gain">
+				<span class="group-title small"><span data-zh="增益">Gain</span> <em data-out="sound_vol"></em></span>
+				<input type="range" min="0" max="1" step="0.001" data-param="sound_vol" />
+			</label>
+		</div>
+		<div class="presets">
+			{presetsRight.map((p) => <button class="box btn" type="button" data-preset={p} data-zh={zh(p)}>{p}</button>)}
+		</div>
+	</div>
+
+	<!-- Waveform type -->
+	<div class="segmented waves" role="radiogroup" aria-label="Waveform">
+		{waves.map((w, i) => <button type="button" data-wave={i} role="radio" data-zh={zh(w)}>{w}</button>)}
+	</div>
+
+	<!-- Parameter groups -->
+	<div class="params">
+		{columns.map((col) => (
+			<div class="col">
+				{col.map((g) => (
+					<div class="group">
+						<h3 class="group-title" data-zh={zh(g.title)}>{g.title}</h3>
+						{g.sliders.map((s) => (
+							<label class="slider">
+								<input
+									type="range"
+									min={SIGNED.includes(s.param) ? -1 : 0}
+									max="1"
+									step="0.001"
+									data-param={s.param}
+								/>
+								<span class="slider-text">
+									<span class="slider-label" data-zh={zh(s.label)}>{s.label}</span>
+									<span class="slider-value" data-out={s.param}></span>
+								</span>
+							</label>
+						))}
+					</div>
+				))}
+			</div>
+		))}
+	</div>
+
+	<!-- Output format -->
+	<div class="format">
+		<div class="format-item">
+			<span class="group-title" data-zh="采样率 (Hz)">Sample Rate (Hz)</span>
+			<div class="segmented" role="radiogroup" aria-label="Sample rate">
+				{rates.map((r) => <button type="button" role="radio" data-rate={r.value}>{r.label}</button>)}
+			</div>
+		</div>
+		<div class="format-item">
+			<span class="group-title" data-zh="位深">Sample size</span>
+			<div class="segmented" role="radiogroup" aria-label="Sample size">
+				{sizes.map((r) => <button type="button" role="radio" data-size={r.value}>{r.label}</button>)}
+			</div>
+		</div>
+	</div>
+
+	<!-- Actions -->
+	<div class="actions">
+		<button class="box big" type="button" data-action="random" data-zh="随机">random</button>
+		<button class="box big play" type="button" data-action="play" data-zh="播放">PLAY</button>
+		<button class="box big" type="button" data-action="mutate" data-zh="变异">mutate</button>
+	</div>
+	<div class="download">
+		<a class="box big dl" data-download href="#" download="fuzz-pedal.wav"><span data-zh="下载">Download</span><small data-filesize>file size: 0kb</small></a>
+	</div>
+</section>
+
+<style>
+	.wire {
+		--line: rgba(239, 232, 214, 0.75);
+		--soft: rgba(239, 232, 214, 0.4);
+		--ink: #efe8d6;
+		--hot: #ff3a6e;
+		margin: 2rem 0 0;
+		padding: 2rem 1.75rem 2.25rem;
+		color: var(--ink);
+		border: 1px dashed var(--soft);
+		border-radius: 18px;
+	}
+	.box {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		color: var(--ink);
+		font: inherit;
+		text-decoration: none;
+		background: transparent;
+		border: 2px solid var(--line);
+		border-radius: 6px;
+		cursor: pointer;
+		transition: background 0.15s, color 0.15s, border-color 0.15s;
+	}
+	.box:hover {
+		color: #000;
+		background: var(--ink);
+	}
+	.box:active {
+		transform: translateY(1px);
+	}
+	button:focus-visible,
+	a:focus-visible,
+	input:focus-visible {
+		outline: 2px solid var(--hot);
+		outline-offset: 2px;
+	}
+
+	/* Top row */
+	.top {
+		display: grid;
+		grid-template-columns: 130px minmax(0, 1fr) 130px;
+		gap: 1.25rem;
+		align-items: start;
+	}
+	.presets {
+		display: grid;
+		gap: 0.6rem;
+	}
+	.btn {
+		height: 36px;
+		font-size: 14px;
+	}
+	.display {
+		position: relative;
+		height: 216px;
+		border-width: 3px;
+		border-radius: 8px;
+		overflow: hidden;
+		cursor: default;
+	}
+	.display:hover {
+		background: transparent;
+	}
+	.wave {
+		position: absolute;
+		inset: 8px 8px 30px;
+		width: calc(100% - 16px);
+		height: calc(100% - 38px);
+	}
+	.meta {
+		position: absolute;
+		bottom: 9px;
+		font-size: 13px;
+		color: var(--soft);
+	}
+	.meta b {
+		font-weight: 500;
+		color: var(--ink);
+	}
+	.meta.left { left: 16px; }
+	.meta.right { right: 16px; }
+	.gain {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.3rem;
+		margin-top: 0.9rem;
+	}
+	.gain input {
+		width: 220px;
+	}
+	.gain em {
+		margin-left: 0.4rem;
+		font-style: normal;
+		font-weight: 400;
+		font-size: 12px;
+		color: var(--soft);
+	}
+
+	/* Segmented controls */
+	.segmented {
+		display: grid;
+		grid-auto-flow: column;
+		grid-auto-columns: 1fr;
+		border: 2px solid var(--line);
+		border-radius: 6px;
+		overflow: hidden;
+	}
+	.segmented button {
+		padding: 0.5rem 0.9rem;
+		font: inherit;
+		font-size: 14px;
+		color: var(--ink);
+		white-space: nowrap;
+		background: transparent;
+		border: none;
+		cursor: pointer;
+	}
+	.segmented button + button {
+		border-left: 2px solid var(--line);
+	}
+	.segmented button:hover {
+		background: rgba(239, 232, 214, 0.12);
+	}
+	.segmented button[aria-checked='true'] {
+		color: #000;
+		background: var(--ink);
+	}
+	.waves {
+		width: min(100%, 520px);
+		margin: 1.5rem auto 2.25rem;
+	}
+
+	/* Parameter sliders */
+	.params {
+		display: grid;
+		grid-template-columns: repeat(6, minmax(0, 1fr));
+		gap: 1.25rem 1rem;
+	}
+	.group + .group {
+		margin-top: 1.1rem;
+	}
+	.group-title {
+		display: block;
+		margin: 0 0 0.7rem;
+		font-size: 13.5px;
+		font-weight: 700;
+		color: var(--ink);
+		white-space: nowrap;
+	}
+	.group-title.small {
+		margin: 0;
+		font-size: 14px;
+	}
+	.slider {
+		display: grid;
+		gap: 0.3rem;
+		margin-bottom: 0.85rem;
+		cursor: pointer;
+	}
+	/* Range input drawn as the wireframe track + round knob. */
+	input[type='range'] {
+		width: 100%;
+		height: 18px;
+		margin: 0;
+		background: transparent;
+		-webkit-appearance: none;
+		appearance: none;
+		cursor: pointer;
+	}
+	input[type='range']::-webkit-slider-runnable-track {
+		height: 8px;
+		border: 2px solid var(--line);
+		border-radius: 999px;
+	}
+	input[type='range']::-moz-range-track {
+		height: 4px;
+		border: 2px solid var(--line);
+		border-radius: 999px;
+	}
+	input[type='range']::-webkit-slider-thumb {
+		width: 16px;
+		height: 16px;
+		margin-top: -6px;
+		background: #0b0b0d;
+		border: 2px solid var(--ink);
+		border-radius: 50%;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+	input[type='range']::-moz-range-thumb {
+		width: 12px;
+		height: 12px;
+		background: #0b0b0d;
+		border: 2px solid var(--ink);
+		border-radius: 50%;
+	}
+	input[type='range']:hover::-webkit-slider-thumb {
+		background: var(--hot);
+	}
+	input[type='range']:hover::-moz-range-thumb {
+		background: var(--hot);
+	}
+	.slider-text {
+		display: flex;
+		flex-direction: column;
+		line-height: 1.25;
+	}
+	.slider-label {
+		font-size: 12.5px;
+		font-weight: 500;
+	}
+	.slider-value {
+		min-height: 1.25em;
+		font-size: 11px;
+		color: var(--soft);
+	}
+
+	/* Output format */
+	.format {
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 1.5rem 3rem;
+		margin: 2rem 0 0;
+	}
+	.format-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+		min-width: 240px;
+	}
+	.format-item .group-title {
+		margin: 0;
+	}
+	.format-item .segmented {
+		width: 100%;
+	}
+
+	/* Actions */
+	.actions {
+		display: flex;
+		justify-content: center;
+		gap: 1.25rem;
+		margin-top: 2.25rem;
+	}
+	.big {
+		height: 58px;
+		padding: 0 1.5rem;
+		min-width: 130px;
+		font-size: 19px;
+		font-weight: 700;
+		border-width: 3px;
+		border-radius: 8px;
+	}
+	.play {
+		min-width: 200px;
+	}
+	.download {
+		display: flex;
+		justify-content: center;
+		margin-top: 1.25rem;
+	}
+	.dl {
+		flex-direction: column;
+		min-width: 200px;
+		height: 64px;
+	}
+	.dl small {
+		font-size: 11px;
+		font-weight: 400;
+		opacity: 0.7;
+	}
+
+	@media (max-width: 860px) {
+		.params {
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+		}
+	}
+	@media (max-width: 600px) {
+		.wire {
+			padding: 1.25rem 1rem 1.5rem;
+		}
+		.top {
+			grid-template-columns: 1fr 1fr;
+		}
+		.display-col {
+			grid-column: 1 / -1;
+			grid-row: 1;
+		}
+		.params {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.actions {
+			flex-wrap: wrap;
+		}
+		.big {
+			min-width: 0;
+			flex: 1;
+		}
+	}
+</style>
+
+<script>
+	import { PRESETS, apply, label, newParams, render, type SoundParams } from '../scripts/fuzz-engine';
+
+	const root = document.querySelector<HTMLElement>('[data-fuzz-editor]');
+	if (root) {
+		const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel);
+		const $$ = <T extends Element>(sel: string) => [...root.querySelectorAll<T>(sel)];
+
+		const canvas = $<HTMLCanvasElement>('canvas.wave')!;
+		const ctx = canvas.getContext('2d')!;
+		const download = $<HTMLAnchorElement>('[data-download]')!;
+
+		let params: SoundParams = newParams();
+		let wave = render(params);
+		let soundName = 'sound';
+
+		// Push the current parameters into every control.
+		const syncControls = () => {
+			for (const input of $$<HTMLInputElement>('input[data-param]')) {
+				const p = input.dataset.param!;
+				input.value = String(params[p]);
+				const out = $<HTMLElement>(`[data-out="${p}"]`);
+				if (out) out.textContent = label(p, Number(params[p]));
+			}
+			const mark = (attr: string, value: number) =>
+				$$<HTMLButtonElement>(`[${attr}]`).forEach((b) =>
+					b.setAttribute('aria-checked', String(Number(b.getAttribute(attr)) === value)),
+				);
+			mark('data-wave', params.wave_type);
+			mark('data-rate', params.sample_rate);
+			mark('data-size', params.sample_size);
+		};
+
+		// Waveform scope: one vertical line per pixel column (min..max of its samples).
+		const drawWave = () => {
+			const { width: w, height: h } = canvas;
+			const data = wave.buffer;
+			ctx.clearRect(0, 0, w, h);
+			ctx.strokeStyle = 'rgba(239, 232, 214, 0.18)';
+			ctx.beginPath();
+			ctx.moveTo(0, h / 2);
+			ctx.lineTo(w, h / 2);
+			ctx.stroke();
+			if (!data.length) return;
+			ctx.fillStyle = '#ff3a6e';
+			const per = data.length / w;
+			for (let x = 0; x < w; x++) {
+				let lo = 1;
+				let hi = -1;
+				const end = Math.min(data.length, Math.floor((x + 1) * per));
+				for (let i = Math.floor(x * per); i < end; i++) {
+					if (data[i] < lo) lo = data[i];
+					if (data[i] > hi) hi = data[i];
+				}
+				if (hi < lo) continue;
+				const y1 = ((1 - Math.min(1, hi)) / 2) * h;
+				const y2 = ((1 - Math.max(-1, lo)) / 2) * h;
+				ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+			}
+		};
+
+		// Re-render after any change: waveform, stats, download link; optionally play.
+		const update = (playNow: boolean) => {
+			wave = render(params);
+			$<HTMLElement>('[data-samples]')!.textContent = String(wave.buffer.length);
+			$<HTMLElement>('[data-clipped]')!.textContent = String(wave.clipping);
+			download.href = wave.dataURI;
+			download.download = `fuzz-pedal-${soundName}.wav`;
+			showSize();
+			drawWave();
+			if (playNow) wave.getAudio().play();
+		};
+
+		// "file size: 6kb" / "文件大小: 6kb", in the current page language.
+		function showSize() {
+			const kb = Math.ceil(wave.wav.length / 1024);
+			const zhOn = document.documentElement.dataset.fuzzLang === 'zh';
+			$<HTMLElement>('[data-filesize]')!.textContent = (zhOn ? '文件大小: ' : 'file size: ') + kb + 'kb';
+		}
+		document.addEventListener('fuzz-lang', showSize);
+
+		const reroll = (method: string, name: string) => {
+			const keep = { sound_vol: params.sound_vol, sample_rate: params.sample_rate, sample_size: params.sample_size };
+			if (method !== 'mutate') {
+				params = newParams();
+				Object.assign(params, keep);
+			}
+			apply(params, method);
+			soundName = name;
+			syncControls();
+			update(true);
+		};
+
+		// Presets
+		$$<HTMLButtonElement>('[data-preset]').forEach((b) =>
+			b.addEventListener('click', () => {
+				const name = b.dataset.preset!;
+				reroll(PRESETS[name], name.split('/')[0].toLowerCase());
+			}),
+		);
+
+		// Sliders: update the label live, re-render and play when released.
+		$$<HTMLInputElement>('input[data-param]').forEach((input) => {
+			const p = input.dataset.param!;
+			input.addEventListener('input', () => {
+				params[p] = Number(input.value);
+				const out = $<HTMLElement>(`[data-out="${p}"]`);
+				if (out) out.textContent = label(p, params[p] as number);
+			});
+			input.addEventListener('change', () => update(true));
+		});
+
+		// Waveform, sample rate, sample size
+		const pick = (attr: string, key: 'wave_type' | 'sample_rate' | 'sample_size') =>
+			$$<HTMLButtonElement>(`[${attr}]`).forEach((b) =>
+				b.addEventListener('click', () => {
+					params[key] = Number(b.getAttribute(attr));
+					syncControls();
+					update(true);
+				}),
+			);
+		pick('data-wave', 'wave_type');
+		pick('data-rate', 'sample_rate');
+		pick('data-size', 'sample_size');
+
+		// random / PLAY / mutate
+		$$<HTMLButtonElement>('[data-action]').forEach((b) =>
+			b.addEventListener('click', () => {
+				const action = b.dataset.action!;
+				if (action === 'play') wave.getAudio().play();
+				else reroll(action, action);
+			}),
+		);
+
+		// Start with a coin sound so there is something to see (not played until clicked).
+		params.sound_vol = 0.25;
+		apply(params, 'pickupCoin');
+		soundName = 'pickup';
+		syncControls();
+		update(false);
+	}
+</script>

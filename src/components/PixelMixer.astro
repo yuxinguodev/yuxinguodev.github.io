@@ -1,0 +1,299 @@
+---
+// A pixel-art mixer that floats and slowly spins in 3D (CSS transforms only:
+// no images, no scripts). Built from Yuxin's three views: the control face in
+// front, dark sides with screws, a plain light back, tabs along the top edge.
+// Knobs, keys, fader caps and pads are stacked layers, so they stand proud of
+// the panel and show their thickness as the box turns.
+
+const P = 5; // one "pixel" in CSS px
+const W = 60; // front face: 60 x 48 pixels -> 300 x 240
+const H = 48;
+const T = 9; // thickness in pixels -> 45px
+
+// ---- Flat artwork on the front panel (SVG, pixel grid) ----
+let face = '';
+const r = (x: number, y: number, w: number, h: number, c: string) => {
+	face += `<rect x="${x * P}" y="${y * P}" width="${w * P}" height="${h * P}" fill="${c}"/>`;
+};
+r(0, 0, W, H, '#16141c');
+r(1, 1, W - 2, H - 2, '#eceae4');
+r(1, H - 3, W - 2, 2, '#c8c6be'); // bottom lip
+r(1, 1, W - 2, 1, '#ffffff');
+// panel seams
+r(12, 2, 1, 17, '#cfcdc5');
+r(39, 2, 1, H - 5, '#cfcdc5');
+r(2, 19, 37, 1, '#cfcdc5');
+r(40, 14, 18, 1, '#cfcdc5');
+r(40, 19, 18, 1, '#cfcdc5');
+// fader bay grid
+r(13, 20, 26, 25, '#e2e0d9');
+for (let x = 13; x <= 38; x += 6) r(x, 20, 1, 25, '#cfcdc5');
+for (let y = 22; y < 45; y += 2) r(13, y, 26, 1, 'rgba(0,0,0,0.05)');
+// fader slots
+[15.5, 21.5, 27.5, 33.5].forEach((x) => r(x, 24, 1, 20, '#1c1a22'));
+// jacks (flat rings)
+[42, 47.5, 53].forEach((x) => {
+	r(x, 4, 4, 4, '#2a2632');
+	r(x + 1, 5, 2, 2, '#77757f');
+	r(x + 1.5, 5.5, 1, 1, '#2a2632');
+});
+// screws
+[[1.5, 1.5], [57.5, 1.5], [1.5, H - 3.5], [57.5, H - 3.5]].forEach(([x, y]) => {
+	r(x, y, 1, 1, '#8a8892');
+});
+const faceSvg = `<svg viewBox="0 0 ${W * P} ${H * P}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${face}</svg>`;
+
+// Back: plain light panel with screws.
+const backSvg = `<svg viewBox="0 0 ${W * P} ${H * P}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+<rect width="${W * P}" height="${H * P}" fill="#16141c"/>
+<rect x="${P}" y="${P}" width="${(W - 2) * P}" height="${(H - 2) * P}" fill="#dddbd4"/>
+<rect x="${P}" y="${P}" width="${(W - 2) * P}" height="${P}" fill="#f4f2ec"/>
+<rect x="${P}" y="${(H - 3) * P}" width="${(W - 2) * P}" height="${2 * P}" fill="#b9b7b0"/>
+${[[4, 4], [55, 4], [4, H - 6], [55, H - 6]].map(([x, y]) => `<rect x="${x * P}" y="${y * P}" width="${P * 1.4}" height="${P * 1.4}" fill="#8a8892"/>`).join('')}
+</svg>`;
+
+// ---- Raised controls: [x, y, w, h, colour, shape, layers] in pixels ----
+type Part = { x: number; y: number; w: number; h: number; c: string; round?: boolean; z?: number; ring?: string };
+const parts: Part[] = [
+	// knobs: black base ring + coloured cap
+	{ x: 3, y: 3.5, w: 7.5, h: 7.5, c: '#e2344f', round: true, z: 5, ring: '#1c1a22' },
+	...[14, 20.5, 27, 33.5].map((x) => ({ x, y: 4.2, w: 4.4, h: 4.4, c: '#e2344f', round: true, z: 4, ring: '#1c1a22' })),
+	...[14, 20.5, 27, 33.5].map((x, i) => ({ x, y: 12, w: 4.4, h: 4.4, c: i === 1 ? '#e2344f' : '#2f6fe0', round: true, z: 4, ring: '#1c1a22' })),
+	{ x: 3.4, y: 14, w: 2, h: 2, c: '#8a8892', round: true, z: 2 },
+	{ x: 7.6, y: 14, w: 2, h: 2, c: '#8a8892', round: true, z: 2 },
+	// small grey + coloured buttons, right block
+	...[41.5, 47, 52.5].map((x) => ({ x, y: 10, w: 4, h: 1.8, c: '#9a98a2', z: 2 })),
+	{ x: 41.5, y: 16, w: 4, h: 2, c: '#2f6fe0', z: 2 },
+	{ x: 47, y: 16, w: 4, h: 2, c: '#f2662a', z: 2 },
+	{ x: 52.5, y: 16, w: 4, h: 2, c: '#f2662a', z: 2 },
+	// left keys
+	...[
+		[21, '#e2344f'],
+		[25.5, '#e2344f'],
+		[32, '#b8e04a'],
+		[36.3, '#b8e04a'],
+		[40.6, '#f2662a'],
+	].flatMap(([y, c]) => [2.4, 7.2].map((x) => ({ x, y: y as number, w: 3.6, h: 2, c: c as string, z: 2 }))),
+	// red indicators above the faders
+	...[14, 20, 26, 32].map((x) => ({ x, y: 21, w: 3.8, h: 1.6, c: '#e2344f', z: 1 })),
+	// fader caps
+	...[
+		[14.4, 30, '#2f6fe0'],
+		[20.4, 30, '#2f6fe0'],
+		[26.4, 31, '#f2662a'],
+		[32.4, 31, '#f2662a'],
+	].map(([x, y, c]) => ({ x: x as number, y: y as number, w: 3.2, h: 3, c: c as string, z: 4 })),
+	// pads: blue column + two lime columns
+	...[21, 27.2, 33.4, 39.6].flatMap((y) =>
+		[41, 46.5, 52].map((x, i) => ({ x, y, w: 4.6, h: 4.6, c: i === 0 ? '#2f6fe0' : '#c4ec3a', z: 2 })),
+	),
+];
+
+// Darken a #rrggbb colour (for the sides of each raised layer).
+const shade = (hex: string, k: number) =>
+	'#' +
+	[1, 3, 5]
+		.map((i) => Math.round(parseInt(hex.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0'))
+		.join('');
+
+// Tabs along the top edge (seen above the panel in the front and back views).
+const tabs = [
+	...[8, 13, 18].map((x) => ({ x, c: '#e2344f' })),
+	...[36, 41, 46, 51].map((x) => ({ x, c: '#77757f' })),
+];
+---
+
+<div class="mixer-stage" aria-hidden="true" style={`--P:${P}px;--W:${W * P}px;--H:${H * P}px;--T:${T * P}px`}>
+	<div class="float">
+		<div class="mixer">
+			<div class="face front">
+				<Fragment set:html={faceSvg} />
+				{parts.map((p) => (
+					<div
+						class:list={['part', { round: p.round }]}
+						style={`left:${p.x * P}px;top:${p.y * P}px;width:${p.w * P}px;height:${p.h * P}px;`}
+					>
+						{Array.from({ length: p.z ?? 2 }, (_, i) => {
+							const n = p.z ?? 2;
+							const topLayer = i === n - 1;
+							const base = p.ring && i < Math.ceil(n / 2) ? p.ring : p.c;
+							return (
+								<span
+									class:list={['layer', { cap: topLayer }]}
+									style={`transform:translateZ(${(i + 1) * 2}px);background:${topLayer ? base : shade(base, 0.62)};`}
+								/>
+							);
+						})}
+					</div>
+				))}
+			</div>
+			<div class="face back"><Fragment set:html={backSvg} /></div>
+			<div class="face side left"><i></i><i></i></div>
+			<div class="face side right"><i></i><i></i></div>
+			<div class="face edge top">
+				{tabs.map((t) => (
+					<div class="tab" style={`left:${t.x * P}px;`}>
+						<span style={`transform:translateZ(3px);background:${shade(t.c, 0.6)}`} />
+						<span style={`transform:translateZ(6px);background:${t.c}`} />
+					</div>
+				))}
+			</div>
+			<div class="face edge bottom"></div>
+		</div>
+	</div>
+	<div class="shadow"></div>
+</div>
+
+<style>
+	.mixer-stage {
+		position: relative;
+		height: 330px;
+		perspective: 1000px;
+		perspective-origin: 50% 35%;
+	}
+	.float {
+		position: absolute;
+		left: 50%;
+		top: 140px;
+		transform-style: preserve-3d;
+		animation: bob 3.2s ease-in-out infinite;
+	}
+	.mixer {
+		position: relative;
+		transform-style: preserve-3d;
+		animation: spin 16s linear infinite;
+	}
+	.face {
+		position: absolute;
+		transform-style: preserve-3d;
+	}
+	.face :global(svg) {
+		display: block;
+		width: 100%;
+		height: 100%;
+	}
+	/* Box centred on the float point: front/back W x H, sides T x H, edges W x T. */
+	.front,
+	.back {
+		width: var(--W);
+		height: var(--H);
+		left: calc(var(--W) / -2);
+		top: calc(var(--H) / -2);
+	}
+	.front {
+		transform: translateZ(calc(var(--T) / 2));
+	}
+	.back {
+		transform: rotateY(180deg) translateZ(calc(var(--T) / 2));
+	}
+	.side {
+		width: var(--T);
+		height: var(--H);
+		left: calc(var(--T) / -2);
+		top: calc(var(--H) / -2);
+		background: linear-gradient(90deg, #1a1820, #2c2934 30%, #2c2934 70%, #1a1820);
+		box-shadow: inset 0 0 0 var(--P) #121016;
+	}
+	.left {
+		transform: rotateY(-90deg) translateZ(calc(var(--W) / 2));
+	}
+	.right {
+		transform: rotateY(90deg) translateZ(calc(var(--W) / 2));
+	}
+	/* screws on the sides */
+	.side i {
+		position: absolute;
+		left: 50%;
+		width: calc(var(--P) * 2);
+		height: calc(var(--P) * 2);
+		margin-left: calc(var(--P) * -1);
+		background: #9a98a2;
+		box-shadow: inset 0 0 0 2px #55535c;
+	}
+	.side i:first-child { top: 14%; }
+	.side i:last-child { bottom: 14%; }
+	.edge {
+		width: var(--W);
+		height: var(--T);
+		left: calc(var(--W) / -2);
+		top: calc(var(--T) / -2);
+		background: repeating-linear-gradient(90deg, #24212c 0 calc(var(--P) * 2), #1d1a24 calc(var(--P) * 2) calc(var(--P) * 4));
+	}
+	.top {
+		transform: rotateX(90deg) translateZ(calc(var(--H) / 2));
+	}
+	.bottom {
+		transform: rotateX(-90deg) translateZ(calc(var(--H) / 2));
+		background: #111016;
+	}
+	/* Tabs sticking up from the top edge. */
+	.tab {
+		position: absolute;
+		top: 25%;
+		width: calc(var(--P) * 4);
+		height: 50%;
+		transform-style: preserve-3d;
+	}
+	.tab span {
+		position: absolute;
+		inset: 0;
+	}
+
+	/* Raised controls: a stack of layers, darker underneath, full colour on top. */
+	.part {
+		position: absolute;
+		transform-style: preserve-3d;
+	}
+	.layer {
+		position: absolute;
+		inset: 0;
+	}
+	/* Pixel-stepped "round" outline for knobs. */
+	.round .layer {
+		clip-path: polygon(30% 0, 70% 0, 70% 10%, 90% 10%, 90% 30%, 100% 30%, 100% 70%, 90% 70%, 90% 90%, 70% 90%, 70% 100%, 30% 100%, 30% 90%, 10% 90%, 10% 70%, 0 70%, 0 30%, 10% 30%, 10% 10%, 30% 10%);
+	}
+	.cap {
+		box-shadow: inset calc(var(--P) * 0.6) calc(var(--P) * 0.6) 0 rgba(255, 255, 255, 0.35);
+	}
+	.round .cap {
+		box-shadow: inset calc(var(--P) * 0.8) calc(var(--P) * 0.8) 0 rgba(255, 255, 255, 0.4);
+	}
+
+	/* Pixel shadow on the floor, breathing with the float. */
+	.shadow {
+		position: absolute;
+		left: 50%;
+		bottom: 4px;
+		width: 260px;
+		height: 22px;
+		margin-left: -130px;
+		background:
+			linear-gradient(#2a1d3a, #2a1d3a) 16px 0 / calc(100% - 32px) 100% no-repeat,
+			linear-gradient(#2a1d3a, #2a1d3a) 0 6px / 100% calc(100% - 12px) no-repeat;
+		opacity: 0.8;
+		filter: drop-shadow(0 0 6px rgba(255, 58, 110, 0.25));
+		animation: breathe 3.2s ease-in-out infinite;
+	}
+	@keyframes spin {
+		from { transform: rotateX(-14deg) rotateY(0deg); }
+		to { transform: rotateX(-14deg) rotateY(360deg); }
+	}
+	@keyframes bob {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-12px); }
+	}
+	@keyframes breathe {
+		0%, 100% { transform: scaleX(1); opacity: 0.8; }
+		50% { transform: scaleX(0.86); opacity: 0.55; }
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.mixer { animation: none; transform: rotateX(-14deg) rotateY(-28deg); }
+		.float, .shadow { animation: none; }
+	}
+	@media (max-width: 480px) {
+		.mixer-stage {
+			height: 280px;
+			transform: scale(0.72);
+		}
+	}
+</style>

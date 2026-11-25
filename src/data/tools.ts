@@ -10,5 +10,5 @@ export interface Tool {
 
 export const TOOLS: Tool[] = [
 	{ id: 'galette', href: '/tools/galette', title: 'Galette', note: 'Game colours, copied as engine code.', tag: 'Colour' },
-	{ id: 'fuzz-pedal', href: '/tools/fuzz-pedal', title: 'Fuzz Pedal', note: 'Coming soon.', tag: 'Audio', soon: true },
+	{ id: 'fuzz-pedal', href: '/tools/fuzz-pedal', title: 'Fuzz Pedal', note: 'Retro sound effects, made in the browser.', tag: 'Audio' },
 ];

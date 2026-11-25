@@ -5,29 +5,50 @@ import Footer from '../../components/Footer.astro';
 import Header from '../../components/Header.astro';
 import { SITE_TITLE } from '../../consts';
 import FuzzBanner from '../../components/FuzzBanner.astro';
-import FuzzEditorWireframe from '../../components/FuzzEditorWireframe.astro';
+import FuzzEditor from '../../components/FuzzEditor.astro';
+import PixelMixer from '../../components/PixelMixer.astro';
+import LangToggle from '../../components/LangToggle.astro';
 ---
 
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title={`Fuzz Pedal | Tools | ${SITE_TITLE}`} description="Fuzz Pedal: a new tool, coming soon." />
+		<BaseHead title={`Fuzz Pedal | Tools | ${SITE_TITLE}`} description="Fuzz Pedal: make retro 8-bit sound effects in your browser and download them as WAV." />
 	</head>
 	<body>
 		<Header />
 		<main>
 			<p class="back"><ArrowLink href="/tools/" back>All tools</ArrowLink></p>
 			<FuzzBanner />
-			<FuzzEditorWireframe />
+			<LangToggle />
+			<FuzzEditor />
 			<div class="placeholder">
 				<h1 class="visually-hidden">Fuzz Pedal</h1>
-				<p class="soon">Coming soon</p>
-				<p class="note">This tool is still in the workshop. Check back later.</p>
+				<p class="soon" data-zh="早期版本">Early version</p>
+				<p class="note" data-zh="功能都能用了，界面还是初版。">Everything works; the look is still a first pass.</p>
 			</div>
 
 			<!-- About / credits, in the spirit of jsfxr's own about page. -->
 			<footer class="about">
-				<h2>about Fuzz Pedal</h2>
+				<PixelMixer />
+				<h2 data-zh="关于 Fuzz Pedal">about Fuzz Pedal</h2>
+				<div data-lang-block="zh" class="zh-block">
+					<p class="lede">
+						Fuzz Pedal 是一个在线 8-bit 音效生成器，用来做复古游戏音效。只需要一个浏览器：选一个预设，推几下滑杆，就能下载 WAV
+						放进你的游戏。它基于{' '}<a href="https://sfxr.me/" target="_blank" rel="noopener">jsfxr</a>，也就是 DrPetter 原版{' '}
+						<a href="https://www.drpetter.se/project_sfxr.html" target="_blank" rel="noopener">sfxr</a> 的 JavaScript 移植版。
+					</p>
+					<p class="credits">
+						（基于{' '}<a href="https://sfxr.me/" target="_blank" rel="noopener">jsfxr</a>，移植自 DrPetter 的{' '}
+						<a href="https://www.drpetter.se/project_sfxr.html" target="_blank" rel="noopener">sfxr</a>）<br />
+						jsfxr © 2011 Eric Fredricksen<br />
+						Chris McCormick 参与贡献<br />
+						Fuzz Pedal 界面 © 2026 Yuxin Guo
+					</p>
+					<p><a href="https://github.com/chr15m/jsfxr" target="_blank" rel="noopener">（jsfxr 源代码）</a></p>
+					<p class="tip">小提示：导出 <code>.wav</code>，可以直接拖进 Unity、Godot 或 Unreal。</p>
+				</div>
+				<div data-lang-block="en">
 				<p class="lede">
 					Fuzz Pedal is an online 8-bit sound maker for retro game effects. All you need is a web browser:
 					pick a preset, push the sliders, then download a WAV for your game. It is built on{' '}
@@ -43,6 +64,7 @@ import FuzzEditorWireframe from '../../components/FuzzEditorWireframe.astro';
 				</p>
 				<p><a href="https://github.com/chr15m/jsfxr" target="_blank" rel="noopener">(jsfxr source code)</a></p>
 				<p class="tip">Tip: export a <code>.wav</code> and drop it straight into Unity, Godot or Unreal.</p>
+				</div>
 			</footer>
 		</main>
 		<Footer />
@@ -89,10 +111,21 @@ import FuzzEditorWireframe from '../../components/FuzzEditorWireframe.astro';
 		color: rgb(var(--gray));
 	}
 
+	/* EN / 中文: show the block that matches the switch (default English). */
+	.zh-block {
+		display: none;
+	}
+	:global(html[data-fuzz-lang='zh']) .zh-block {
+		display: block;
+	}
+	:global(html[data-fuzz-lang='zh']) [data-lang-block='en'] {
+		display: none;
+	}
+
 	/* About / credits footer. */
 	.about {
 		margin: 1rem auto 5rem;
-		padding-top: 2.5rem;
+		padding-top: 0.5rem;
 		max-width: 760px;
 		text-align: center;
 		border-top: 1px solid var(--border);
