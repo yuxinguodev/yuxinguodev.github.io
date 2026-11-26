@@ -1,143 +1,105 @@
 ---
-// EN / 中文 rocker switch for the Fuzz Pedal page. Swaps every element that
+// EN / 中文 toggle switch for the Fuzz Pedal page. Swaps every element that
 // has a data-zh attribute (and shows/hides [data-lang-block] sections). The
 // choice is remembered in localStorage.
 ---
 
 <div class="lang-toggle">
-	<label class="rocker rocker-small">
+	<span class="opt en">EN</span>
+	<label class="switch">
 		<input type="checkbox" aria-label="中文 / English" data-lang-toggle />
-		<span class="switch-left">中文</span>
-		<span class="switch-right">EN</span>
+		<span class="slider"></span>
 	</label>
+	<!-- 中文 drawn as outlines from 卓特悦动黑 (SIL OFL), so the 1.8 MB font isn't loaded just for this label. -->
+	<span class="opt zh" role="img" aria-label="中文"><svg viewBox="3 -81 158 94" aria-hidden="true"><path fill="currentColor" d="M26.8 10.2L29.5-15.3L19.6-15.3L19.4-13.7L5.1-13.7L5.3-15.3L5.2-15.3L7.4-35.5L10.3-63.9L24.7-63.9L24.5-62.1L34.4-62.1L36-77L52.6-77L51-62.1L61.4-62.1L61.6-63.9L76-63.9L71.8-25L70.8-15.3L70.6-13.7L56.3-13.7L56.5-15.3L46-15.3L43.4 10.2L26.8 10.2ZM20.8-26.3L31.4-26.3L34-51L23.3-51L22.4-42.3L20.8-26.3ZM47-26.3L57.6-26.3L60.2-51L49.6-51L47-26.3ZM80.4 5.1Q97.7-3.6 109.6-16.5L109.6-16.5Q100-33.2 98.9-54.8L98.9-54.8L89.1-54.8L90.3-65.8L119.6-65.8Q114.8-70.4 111.1-73.2L111.1-73.2L114.5-78.6Q120.8-78.2 127-76.3Q133.2-74.4 136.9-71.8L136.9-71.8L132.3-65.8L148.1-65.8L157.9-69.6L157.1-62L156.3-54.8L147.8-54.8Q143.5-33.9 130.3-18L130.3-18Q139.7-10.4 152-5.7L152-5.7L142 11.6Q135.6 9.6 129.2 5.3Q122.8 0.9 117.3-5.4L117.3-5.4Q102.1 6.6 83.2 11.3L83.2 11.3L80.4 5.1ZM107.1-54.8Q110.3-40.6 119.2-29.1L119.2-29.1Q126.7-41 130.3-54.8L130.3-54.8L107.1-54.8Z" /></svg></span>
 </div>
 
 <style>
 	.lang-toggle {
 		display: flex;
+		align-items: center;
 		justify-content: center;
+		gap: 0.7rem;
 		margin: 1.5rem 0 0;
+		font-weight: 700;
+	}
+	.opt {
+		display: inline-flex;
+		font-size: 0.95rem;
+		color: #6b6d70;
+		transition: color 0.15s;
+	}
+	.zh svg {
+		height: 1.05em;
+		width: auto;
+	}
+	/* highlight whichever language is on */
+	.lang-toggle:not(:has(input:checked)) .en,
+	.lang-toggle:has(input:checked) .zh {
+		color: #e8e8e8;
 	}
 
-	/* ---- Rocker switch (from the snippet Yuxin supplied) ---- */
-	.rocker {
-		display: inline-block;
+	/* ---- Toggle switch (from the snippet Yuxin supplied) ---- */
+	.switch {
+		--switch_width: 2em;
+		--switch_height: 1em;
+		--thumb_color: #e8e8e8;
+		--track_color: #e8e8e8;
+		--track_active_color: #888;
+		--outline_color: #000;
+		font-size: 24px;
 		position: relative;
-		font-size: 2em;
-		font-weight: bold;
-		text-align: center;
-		text-transform: uppercase;
-		color: #888;
-		width: 7em;
-		height: 4em;
-		overflow: hidden;
-		border-bottom: 0.5em solid #eee;
+		display: inline-block;
+		width: var(--switch_width);
+		height: var(--switch_height);
 	}
-	.rocker-small {
-		font-size: 0.85em; /* sizes the whole switch */
-	}
-	.rocker::before {
-		content: '';
-		position: absolute;
-		top: 0.5em;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background-color: #999;
-		border: 0.5em solid #eee;
-		border-bottom: 0;
-	}
-	.rocker input {
+	.switch input {
 		opacity: 0;
 		width: 0;
 		height: 0;
 	}
-	.switch-left,
-	.switch-right {
+	.slider {
+		box-sizing: border-box;
+		border: 2px solid var(--outline_color);
+		position: absolute;
 		cursor: pointer;
+		inset: 0;
+		background-color: var(--track_color);
+		transition: 0.15s;
+		border-radius: var(--switch_height);
+	}
+	.slider::before {
+		box-sizing: border-box;
 		position: absolute;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		height: 2.5em;
-		width: 3em;
-		transition: 0.2s;
-		user-select: none;
-	}
-	.switch-left {
-		height: 2.4em;
-		width: 2.75em;
-		left: 0.85em;
-		bottom: 0.4em;
-		background-color: #ddd;
-		transform: rotate(15deg) skewX(15deg);
-	}
-	.switch-right {
-		right: 0.5em;
-		bottom: 0;
-		background-color: #bd5757;
-		color: #fff;
-	}
-	.switch-left::before,
-	.switch-right::before {
 		content: '';
-		position: absolute;
-		width: 0.4em;
-		height: 2.45em;
-		bottom: -0.45em;
-		background-color: #ccc;
-		transform: skewY(-65deg);
+		height: var(--switch_height);
+		width: var(--switch_height);
+		border: 2px solid var(--outline_color);
+		border-radius: 100%;
+		left: -2px;
+		bottom: -2px;
+		background-color: var(--thumb_color);
+		transform: translateY(-0.2em);
+		box-shadow: 0 0.2em 0 var(--outline_color);
+		transition: 0.15s;
 	}
-	.switch-left::before {
-		left: -0.4em;
+	input:checked + .slider {
+		background-color: var(--track_active_color);
 	}
-	.switch-right::before {
-		right: -0.375em;
-		background-color: transparent;
-		transform: skewY(65deg);
+	input:focus-visible + .slider {
+		box-shadow: 0 0 0 2px #ff3a6e;
 	}
-	input:checked + .switch-left {
-		background-color: #0084d0;
-		color: #fff;
-		bottom: 0px;
-		left: 0.5em;
-		height: 2.5em;
-		width: 3em;
-		transform: rotate(0deg) skewX(0deg);
+	/* Raise the thumb on hover (the input itself has no size, so hover the label). */
+	.switch:hover .slider::before {
+		transform: translateY(-0.3em);
+		box-shadow: 0 0.3em 0 var(--outline_color);
 	}
-	input:checked + .switch-left::before {
-		background-color: transparent;
-		width: 3.0833em;
+	input:checked + .slider::before {
+		transform: translateX(calc(var(--switch_width) - var(--switch_height))) translateY(-0.2em);
 	}
-	input:checked + .switch-left + .switch-right {
-		background-color: #ddd;
-		color: #888;
-		bottom: 0.4em;
-		right: 0.8em;
-		height: 2.4em;
-		width: 2.75em;
-		transform: rotate(-15deg) skewX(-15deg);
-	}
-	input:checked + .switch-left + .switch-right::before {
-		background-color: #ccc;
-	}
-	/* Keyboard users */
-	input:focus + .switch-left {
-		color: #333;
-	}
-	input:checked:focus + .switch-left {
-		color: #fff;
-	}
-	input:focus + .switch-left + .switch-right {
-		color: #fff;
-	}
-	input:checked:focus + .switch-left + .switch-right {
-		color: #333;
-	}
-	input:focus-visible ~ .switch-right,
-	input:focus-visible ~ .switch-left {
-		outline: 2px solid #ff3a6e;
-		outline-offset: -2px;
+	.switch:hover input:checked + .slider::before {
+		transform: translateX(calc(var(--switch_width) - var(--switch_height))) translateY(-0.3em);
+		box-shadow: 0 0.3em 0 var(--outline_color);
 	}
 </style>
 
@@ -167,7 +129,7 @@
 			input.checked = true;
 			setLang('zh');
 		}
-		// Checked = 中文 (left key pressed), unchecked = EN (right key pressed).
+		// Checked (thumb right) = 中文, unchecked (thumb left) = EN.
 		input.addEventListener('change', () => setLang(input.checked ? 'zh' : 'en'));
 	}
 </script>

@@ -1,19 +1,27 @@
 ---
 // Fuzz Pedal sound-effect editor, wired to jsfxr (see src/scripts/fuzz-engine.ts).
-// Layout follows Yuxin's panel design; styling is still the plain "wireframe" look.
+// Look follows Yuxin's retro UI design: a cream "device" panel, bevelled pixel
+// buttons, a green CRT screen with a little stage scene, and colour-coded
+// parameter cards.
 
-const presetsLeft = ['Pickup/coin', 'Laser/shoot', 'Explosion', 'Powerup', 'Hit/hurt'];
-const presetsRight = ['Jump', 'Click', 'Blip/select', 'Synth', 'Tone'];
+type Preset = { name: string };
+const presetsLeft: Preset[] = ['Pickup/coin', 'Laser/shoot', 'Explosion', 'Powerup', 'Hit/hurt'].map((name) => ({ name }));
+const presetsRight: Preset[] = ['Jump', 'Click', 'Blip/select', 'Synth', 'Tone'].map((name) => ({ name }));
 const waves = ['Square', 'Sawtooth', 'Sine', 'Noise'];
 
 type Slider = { label: string; param: string };
-type Group = { title: string; sliders: Slider[] };
+type Group = { title: string; c: string; sliders: Slider[] };
 
-// Each column holds one or two groups, top to bottom. `param` is the jsfxr field.
+// Card colours from the design: header tab + slider fill.
+const G = { green: '#86b35e', yellow: '#dcb44a', pink: '#d67d90', orange: '#da7a3e', blue: '#6492c6' };
+
+// Each column holds one or two cards, top to bottom. `param` is the jsfxr field.
+// Cards in reading order: the first three lists are the top row, the next three sit below.
 const columns: Group[][] = [
 	[
 		{
 			title: 'Envelope',
+			c: G.green,
 			sliders: [
 				{ label: 'Attack time', param: 'p_env_attack' },
 				{ label: 'Sustain time', param: 'p_env_sustain' },
@@ -25,6 +33,7 @@ const columns: Group[][] = [
 	[
 		{
 			title: 'Frequency',
+			c: G.yellow,
 			sliders: [
 				{ label: 'Start frequency', param: 'p_base_freq' },
 				{ label: 'Min freq. cutoff', param: 'p_freq_limit' },
@@ -36,6 +45,7 @@ const columns: Group[][] = [
 	[
 		{
 			title: 'Vibrato',
+			c: G.pink,
 			sliders: [
 				{ label: 'Depth', param: 'p_vib_strength' },
 				{ label: 'Speed', param: 'p_vib_speed' },
@@ -43,6 +53,7 @@ const columns: Group[][] = [
 		},
 		{
 			title: 'Arpeggiation',
+			c: G.blue,
 			sliders: [
 				{ label: 'Frequency mult', param: 'p_arp_mod' },
 				{ label: 'Change speed', param: 'p_arp_speed' },
@@ -52,6 +63,7 @@ const columns: Group[][] = [
 	[
 		{
 			title: 'Duty Cycle',
+			c: G.orange,
 			sliders: [
 				{ label: 'Duty cycle', param: 'p_duty' },
 				{ label: 'Sweep', param: 'p_duty_ramp' },
@@ -59,6 +71,7 @@ const columns: Group[][] = [
 		},
 		{
 			title: 'Flanger',
+			c: G.yellow,
 			sliders: [
 				{ label: 'Offset', param: 'p_pha_offset' },
 				{ label: 'Sweep', param: 'p_pha_ramp' },
@@ -68,6 +81,7 @@ const columns: Group[][] = [
 	[
 		{
 			title: 'Low-Pass Filter',
+			c: G.blue,
 			sliders: [
 				{ label: 'Cutoff frequency', param: 'p_lpf_freq' },
 				{ label: 'Cutoff sweep', param: 'p_lpf_ramp' },
@@ -76,12 +90,14 @@ const columns: Group[][] = [
 		},
 		{
 			title: 'Retrigger',
+			c: G.pink,
 			sliders: [{ label: 'Rate', param: 'p_repeat_speed' }],
 		},
 	],
 	[
 		{
 			title: 'High-Pass Filter',
+			c: G.green,
 			sliders: [
 				{ label: 'Cutoff frequency', param: 'p_hpf_freq' },
 				{ label: 'Cutoff sweep', param: 'p_hpf_ramp' },
@@ -89,8 +105,11 @@ const columns: Group[][] = [
 		},
 	],
 ];
+// Three independent stacks, so a short card never leaves a gap under its neighbour.
+const stacks = [0, 1, 2].map((i) => [...columns[i], ...(columns[i + 3] ?? [])]);
 
-// jsfxr can only divide 44.1 kHz evenly, so the lowest rate is 5.5 kHz.
+// jsfxr can only divide 44.1 kHz evenly, so the lowest rate is 5.5 kHz (an "8k"
+// setting would play about 10% flat).
 const rates = [
 	{ label: '44k', value: 44100 },
 	{ label: '22k', value: 22050 },
@@ -103,96 +122,150 @@ const sizes = [
 ];
 // Chinese labels for the EN / 中文 switch (LangToggle swaps any [data-zh]).
 const ZH: Record<string, string> = {
-	"Pickup/coin": "拾取/金币",
-	"Laser/shoot": "激光/射击",
-	"Explosion": "爆炸",
-	"Powerup": "强化",
-	"Hit/hurt": "受击",
-	"Jump": "跳跃",
-	"Click": "点击",
-	"Blip/select": "选择音",
-	"Synth": "合成器",
-	"Tone": "纯音",
-	"Square": "方波",
-	"Sawtooth": "锯齿波",
-	"Sine": "正弦波",
-	"Noise": "噪声",
-	"Envelope": "包络",
-	"Frequency": "频率",
-	"Vibrato": "颤音",
-	"Arpeggiation": "琶音",
-	"Duty Cycle": "占空比",
-	"Flanger": "镶边",
-	"Low-Pass Filter": "低通滤波",
-	"Retrigger": "重触发",
-	"High-Pass Filter": "高通滤波",
-	"Attack time": "起音时间",
-	"Sustain time": "持续时间",
-	"Sustain punch": "持续冲击",
-	"Decay time": "衰减时间",
-	"Start frequency": "起始频率",
-	"Min freq. cutoff": "最低频率",
-	"Slide": "滑音",
-	"Delta slide": "滑音加速",
-	"Depth": "深度",
-	"Speed": "速度",
-	"Frequency mult": "频率倍数",
-	"Change speed": "变化速度",
-	"Duty cycle": "占空比",
-	"Sweep": "扫动",
-	"Offset": "偏移",
-	"Cutoff frequency": "截止频率",
-	"Cutoff sweep": "截止扫动",
-	"Resonance": "共振",
-	"Rate": "速率"
+	'Pickup/coin': '拾取/金币',
+	'Laser/shoot': '激光/射击',
+	Explosion: '爆炸',
+	Powerup: '强化',
+	'Hit/hurt': '受击',
+	Jump: '跳跃',
+	Click: '点击',
+	'Blip/select': '选择音',
+	Synth: '合成器',
+	Tone: '纯音',
+	Square: '方波',
+	Sawtooth: '锯齿波',
+	Sine: '正弦波',
+	Noise: '噪声',
+	Envelope: '包络',
+	Frequency: '频率',
+	Vibrato: '颤音',
+	Arpeggiation: '琶音',
+	'Duty Cycle': '占空比',
+	Flanger: '镶边',
+	'Low-Pass Filter': '低通滤波',
+	Retrigger: '重触发',
+	'High-Pass Filter': '高通滤波',
+	'Attack time': '起音时间',
+	'Sustain time': '持续时间',
+	'Sustain punch': '持续冲击',
+	'Decay time': '衰减时间',
+	'Start frequency': '起始频率',
+	'Min freq. cutoff': '最低频率',
+	Slide: '滑音',
+	'Delta slide': '滑音加速',
+	Depth: '深度',
+	Speed: '速度',
+	'Frequency mult': '频率倍数',
+	'Change speed': '变化速度',
+	'Duty cycle': '占空比',
+	Sweep: '扫动',
+	Offset: '偏移',
+	'Cutoff frequency': '截止频率',
+	'Cutoff sweep': '截止扫动',
+	Resonance: '共振',
+	Rate: '速率',
 };
 const zh = (en: string) => ZH[en] ?? en;
 const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_pha_offset', 'p_pha_ramp', 'p_lpf_ramp', 'p_hpf_ramp'];
+
+// ---- CRT stage scene (static pixel art, SVG; the waveform is drawn live on a canvas) ----
+const SW = 640;
+const SH = 280;
+let scene = '';
+const px = (x: number, y: number, w: number, h: number, c: string) => {
+	scene += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`;
+};
+// floor grid (perspective)
+const HZ = 226; // horizon: floor grid sits low on the screen
+for (let i = -10; i <= 10; i++) {
+	scene += `<line x1="${320 + i * 18}" y1="${HZ}" x2="${320 + i * 80}" y2="${SH}" stroke="#2f9a4c" stroke-width="1.5" opacity="0.7"/>`;
+}
+[0, 5, 12, 22, 35, 54].forEach((d) => px(0, HZ + d, SW, 1.5, '#2f9a4c'));
+const sceneSvg = `<svg viewBox="0 0 ${SW} ${SH}" shape-rendering="crispEdges" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${scene}</svg>`;
+
+// Pixel icons for the big buttons.
+const dice = `<svg viewBox="0 0 12 10" shape-rendering="crispEdges" aria-hidden="true"><rect x="0" y="0" width="12" height="10" fill="#121018"/><rect x="1" y="1" width="10" height="8" fill="#ff6fa8"/><rect x="2" y="2" width="2" height="2" fill="#121018"/><rect x="8" y="2" width="2" height="2" fill="#121018"/><rect x="5" y="4" width="2" height="2" fill="#121018"/><rect x="2" y="6" width="2" height="2" fill="#121018"/><rect x="8" y="6" width="2" height="2" fill="#121018"/></svg>`;
+const playIcon = `<svg viewBox="0 0 8 10" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 0h2v1h2v1h2v1h2v4h-2v1h-2v1h-2v1h-2z" fill="#121018"/><path d="M2 2h2v1h2v4h-2v1h-2z" fill="#f8c62e"/></svg>`;
+const shuffle = `<svg viewBox="0 0 14 10" shape-rendering="crispEdges" aria-hidden="true"><path d="M0 1h3v1h1v1h1v1h1v1h1v1h1v1h2v-1h1v1h1v1h-1v1h-1v-1h-2v-1h-1v-1h-1v-1h-1v-1h-1v-1h-1v-1h-2z" fill="#b14dff"/><path d="M0 8h3v-1h1v-1h1v1h-1v1h-1v1h-3z M8 2h2v-1h1v1h1v1h-1v1h-1v-1h-2z M7 4h1v1h-1z" fill="#ff6fa8"/></svg>`;
+const dlIcon = `<svg viewBox="0 0 12 12" shape-rendering="crispEdges" aria-hidden="true"><path d="M4 0h4v5h3v1h-1v1h-1v1h-1v1h-2v-1h-1v-1h-1v-1h-1v-1h3z" fill="#2fbf3a"/><path d="M0 8h2v2h8v-2h2v4h-12z" fill="#121018"/></svg>`;
 ---
 
-<section class="wire" data-fuzz-editor aria-label="Sound effect editor">
-	<!-- Presets | waveform display + gain | presets -->
+<section class="device" data-fuzz-editor aria-label="Sound effect editor">
+	<!-- Stamped nameplate: model, power LED, signal LED that flashes while a sound plays. -->
+	<div class="plate" aria-hidden="true">
+		<span class="brand">FUZZ PEDAL</span>
+		<span class="model">FP-01 / SFX UNIT</span>
+		<span class="leds"><i class="led pwr"></i>PWR<i class="led sig" data-sig></i>SIG</span>
+		<span class="vent"></span>
+	</div>
+	<!-- Presets | CRT screen + gain | presets -->
 	<div class="top">
 		<div class="presets">
-			{presetsLeft.map((p) => <button class="box btn" type="button" data-preset={p} data-zh={zh(p)}>{p}</button>)}
+			{presetsLeft.map((p) => (
+				<button class="key preset" type="button" data-preset={p.name}>
+					<span data-zh={zh(p.name)}>{p.name.replace('/', '/​')}</span>
+				</button>
+			))}
 		</div>
-		<div class="display-col">
-			<div class="box display">
-				<canvas class="wave" width="800" height="240" aria-label="Waveform"></canvas>
-				<span class="meta left"><span data-zh="采样数:">Samples:</span> <b data-samples>0</b></span>
-				<span class="meta right"><span data-zh="削波:">Clipped:</span> <b data-clipped>0</b></span>
+		<div class="screen-col">
+			<div class="bezel">
+				<div class="crt">
+					<!-- Curved-glass warp + phosphor bloom; the warp map is drawn by the script below. -->
+					<svg class="fx-defs" width="0" height="0" aria-hidden="true">
+						<filter id="crt-fx" x="0" y="0" width="1" height="1" primitiveUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+							<feImage data-warp-map x="0" y="0" width="1" height="1" preserveAspectRatio="none" result="map" />
+							<feDisplacementMap in="SourceGraphic" in2="map" scale="0.07" xChannelSelector="R" yChannelSelector="G" result="warp" />
+							<feGaussianBlur in="warp" stdDeviation="0.0012" result="bloom" />
+							<feMerge><feMergeNode in="bloom" /><feMergeNode in="warp" /></feMerge>
+						</filter>
+					</svg>
+					<div class="crt-content">
+					<Fragment set:html={sceneSvg} />
+					<canvas class="scope" width="640" height="280" aria-label="Waveform"></canvas>
+					</div>
+					<!-- HUD text sits above the glass effects so it stays sharp. -->
+					<div class="hud tl">
+						<span>SMP <b data-samples-hud>000000</b></span>
+						<span>RATE <b data-rate-hud>44K</b></span>
+						<span>BIT <b data-bit-hud>16</b></span>
+						<span data-wave-hud>SQUARE</span>
+					</div>
+					<div class="hud tc"><span data-name-hud>SONG A</span><i class="dots"></i></div>
+					<div class="hud tr">CLP <b data-clip-hud>000</b></div>
+					<div class="hud bl"><span data-zh="采样数:">Samples:</span> <b data-samples>0</b></div>
+					<div class="hud br"><span data-zh="削波:">Clipped:</span> <b data-clipped>0</b></div>
+					<i class="glass" aria-hidden="true"></i>
+				</div>
 			</div>
 			<label class="gain">
-				<span class="group-title small"><span data-zh="增益">Gain</span> <em data-out="sound_vol"></em></span>
-				<input type="range" min="0" max="1" step="0.001" data-param="sound_vol" />
+				<span class="tagrow"><i class="grip"></i><span class="tag"><span data-zh="增益">Gain</span> <em data-out="sound_vol"></em></span><i class="grip"></i></span>
+				<input type="range" min="0" max="1" step="0.001" data-param="sound_vol" style="--c:#86b35e" />
 			</label>
 		</div>
 		<div class="presets">
-			{presetsRight.map((p) => <button class="box btn" type="button" data-preset={p} data-zh={zh(p)}>{p}</button>)}
+			{presetsRight.map((p) => (
+				<button class="key preset" type="button" data-preset={p.name}>
+					<span data-zh={zh(p.name)}>{p.name.replace('/', '/​')}</span>
+				</button>
+			))}
 		</div>
 	</div>
 
 	<!-- Waveform type -->
-	<div class="segmented waves" role="radiogroup" aria-label="Waveform">
-		{waves.map((w, i) => <button type="button" data-wave={i} role="radio" data-zh={zh(w)}>{w}</button>)}
+	<div class="seg waves" role="radiogroup" aria-label="Waveform" style="--on:#86b35e">
+		{waves.map((w, i) => <button class="key" type="button" data-wave={i} role="radio" data-zh={zh(w)}>{w}</button>)}
 	</div>
 
-	<!-- Parameter groups -->
+	<!-- Parameter cards -->
 	<div class="params">
-		{columns.map((col) => (
+		{stacks.map((col) => (
 			<div class="col">
 				{col.map((g) => (
-					<div class="group">
-						<h3 class="group-title" data-zh={zh(g.title)}>{g.title}</h3>
+					<div class="card" style={`--c:${g.c}`}>
+						<h3 class="card-head"><i class="grip"></i><span class="tab" data-zh={zh(g.title)}>{g.title}</span><i class="grip"></i></h3>
 						{g.sliders.map((s) => (
 							<label class="slider">
-								<input
-									type="range"
-									min={SIGNED.includes(s.param) ? -1 : 0}
-									max="1"
-									step="0.001"
-									data-param={s.param}
-								/>
+								<input type="range" min={SIGNED.includes(s.param) ? -1 : 0} max="1" step="0.001" data-param={s.param} />
 								<span class="slider-text">
 									<span class="slider-label" data-zh={zh(s.label)}>{s.label}</span>
 									<span class="slider-value" data-out={s.param}></span>
@@ -207,197 +280,443 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 
 	<!-- Output format -->
 	<div class="format">
-		<div class="format-item">
-			<span class="group-title" data-zh="采样率 (Hz)">Sample Rate (Hz)</span>
-			<div class="segmented" role="radiogroup" aria-label="Sample rate">
-				{rates.map((r) => <button type="button" role="radio" data-rate={r.value}>{r.label}</button>)}
+		<div class="format-item" style="--c:#86b35e">
+			<span class="tagrow"><i class="grip"></i><span class="tag" data-zh="采样率 (Hz)">Sample Rate (Hz)</span><i class="grip"></i></span>
+			<div class="seg" role="radiogroup" aria-label="Sample rate" style="--on:#86b35e">
+				{rates.map((r) => <button class="key" type="button" role="radio" data-rate={r.value}>{r.label}</button>)}
 			</div>
 		</div>
-		<div class="format-item">
-			<span class="group-title" data-zh="位深">Sample size</span>
-			<div class="segmented" role="radiogroup" aria-label="Sample size">
-				{sizes.map((r) => <button type="button" role="radio" data-size={r.value}>{r.label}</button>)}
+		<div class="format-item" style="--c:#dcb44a">
+			<span class="tagrow"><i class="grip"></i><span class="tag" data-zh="位深">Sample size</span><i class="grip"></i></span>
+			<div class="seg" role="radiogroup" aria-label="Sample size" style="--on:#dcb44a">
+				{sizes.map((r) => <button class="key" type="button" role="radio" data-size={r.value}>{r.label}</button>)}
 			</div>
 		</div>
 	</div>
 
 	<!-- Actions -->
 	<div class="actions">
-		<button class="box big" type="button" data-action="random" data-zh="随机">random</button>
-		<button class="box big play" type="button" data-action="play" data-zh="播放">PLAY</button>
-		<button class="box big" type="button" data-action="mutate" data-zh="变异">mutate</button>
+		<button class="key big" type="button" data-action="random"><Fragment set:html={dice} /><span data-zh="随机">random</span></button>
+		<button class="key big play" type="button" data-action="play"><Fragment set:html={playIcon} /><span data-zh="播放">PLAY</span></button>
+		<button class="key big" type="button" data-action="mutate"><Fragment set:html={shuffle} /><span data-zh="变异">mutate</span></button>
 	</div>
 	<div class="download">
-		<a class="box big dl" data-download href="#" download="fuzz-pedal.wav"><span data-zh="下载">Download</span><small data-filesize>file size: 0kb</small></a>
+		<a class="key big dl" data-download href="#" download="fuzz-pedal.wav">
+			<Fragment set:html={dlIcon} />
+			<span class="dl-text"><span data-zh="下载">Download</span><small data-filesize>file size: 0kb</small></span>
+		</a>
 	</div>
 </section>
 
 <style>
-	.wire {
-		--line: rgba(239, 232, 214, 0.75);
-		--soft: rgba(239, 232, 214, 0.4);
-		--ink: #efe8d6;
-		--hot: #ff3a6e;
+	.device {
+		--ink: #1e1c24;
+		--face: #e8e6df;
+		--hi: #ffffff;
+		--lo: #a9a6a0;
+		--cream: #f4f0e6;
+		position: relative;
+		width: 100%; /* same width as the header banner above */
+		box-sizing: border-box;
 		margin: 2rem 0 0;
-		padding: 2rem 1.75rem 2.25rem;
+		padding: 1.75rem 1.5rem 2rem;
 		color: var(--ink);
-		border: 1px dashed var(--soft);
-		border-radius: 18px;
+		/* Worn gunmetal: rubbed-bright patches, scuffs and fine scratches over a
+		   dark brushed plate; the pixel bevel comes from the stepped borders below. */
+		background:
+			radial-gradient(28% 18% at 12% 8%, #ffffff12, #0000 70%),
+			radial-gradient(22% 16% at 88% 94%, #ffffff0f, #0000 70%),
+			radial-gradient(14% 10% at 70% 30%, #00000040, #0000 70%),
+			radial-gradient(18% 12% at 30% 72%, #0000002e, #0000 70%),
+			linear-gradient(118deg, #0000 47.6%, #ffffff10 47.8% 48.1%, #0000 48.3%),
+			linear-gradient(26deg, #0000 71.8%, #ffffff0d 72% 72.2%, #0000 72.4%),
+			linear-gradient(152deg, #0000 22.8%, #00000038 23% 23.3%, #0000 23.5%),
+			repeating-linear-gradient(0deg, #ffffff05 0 1px, #0000 1px 4px),
+			linear-gradient(180deg, #4a4e56 0%, #3a3d44 45%, #2c2e33 100%);
+		border: 4px solid #101114;
+		border-radius: 14px;
+		box-shadow:
+			inset 4px 4px 0 #626770,
+			inset -4px -4px 0 #1b1c20,
+			inset 8px 8px 0 #474b53,
+			inset -8px -8px 0 #24262b,
+			0 8px 0 #000a,
+			0 14px 30px -8px #000c;
+		font-family: var(--font-body), monospace;
 	}
-	.box {
-		display: flex;
+	/* Film of grain + wear on top of the metal (doesn't catch clicks). */
+	.device::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		border-radius: inherit;
+		background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 160px 160px;
+		opacity: 0.16;
+		mix-blend-mode: overlay;
+		pointer-events: none;
+	}
+	/* Corner screws (pixel squares with a slot). */
+	.device::after {
+		content: '';
+		position: absolute;
+		inset: 12px;
+		z-index: 0;
+		background:
+			linear-gradient(#1a1b1f, #1a1b1f) 0 0 / 14px 14px no-repeat,
+			linear-gradient(#1a1b1f, #1a1b1f) 100% 0 / 14px 14px no-repeat,
+			linear-gradient(#1a1b1f, #1a1b1f) 0 100% / 14px 14px no-repeat,
+			linear-gradient(#1a1b1f, #1a1b1f) 100% 100% / 14px 14px no-repeat;
+		-webkit-mask:
+			linear-gradient(#000, #000) 0 0 / 14px 14px no-repeat,
+			linear-gradient(#000, #000) 100% 0 / 14px 14px no-repeat,
+			linear-gradient(#000, #000) 0 100% / 14px 14px no-repeat,
+			linear-gradient(#000, #000) 100% 100% / 14px 14px no-repeat;
+		box-shadow: none;
+		pointer-events: none;
+		filter: drop-shadow(1px 1px 0 #6a6f78);
+	}
+	.device > :global(*) {
+		position: relative;
+		z-index: 1;
+	}
+
+	/* ---- Bevelled pixel key (shared by every button) ---- */
+	.key {
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		color: var(--ink);
+		gap: 0.55rem;
 		font: inherit;
+		font-weight: 700;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--ink);
 		text-decoration: none;
-		background: transparent;
-		border: 2px solid var(--line);
-		border-radius: 6px;
+		background: var(--face);
+		border: 3px solid var(--ink);
+		border-radius: 4px;
+		box-shadow:
+			inset 3px 3px 0 var(--hi),
+			inset -3px -3px 0 var(--lo),
+			0 3px 0 var(--ink);
 		cursor: pointer;
-		transition: background 0.15s, color 0.15s, border-color 0.15s;
+		transition: transform 0.06s, box-shadow 0.06s, background 0.15s;
 	}
-	.box:hover {
-		color: #000;
-		background: var(--ink);
+	.key:hover {
+		background: #f6f4ee;
 	}
-	.box:active {
-		transform: translateY(1px);
+	.key:active {
+		transform: translateY(3px);
+		box-shadow:
+			inset 3px 3px 0 var(--lo),
+			inset -3px -3px 0 var(--hi),
+			0 0 0 var(--ink);
 	}
-	button:focus-visible,
-	a:focus-visible,
+	.key:focus-visible,
 	input:focus-visible {
-		outline: 2px solid var(--hot);
+		outline: 3px solid #ff3a6e;
 		outline-offset: 2px;
 	}
 
-	/* Top row */
+	/* ---- Top row ---- */
 	.top {
 		display: grid;
-		grid-template-columns: 130px minmax(0, 1fr) 130px;
-		gap: 1.25rem;
+		grid-template-columns: 86px minmax(0, 1fr) 86px;
+		gap: 0.9rem;
 		align-items: start;
 	}
+	/* Half-width preset keys, spread down the full height of the screen. */
 	.presets {
 		display: grid;
+		grid-auto-rows: auto;
+		align-content: start; /* compact stack, top-aligned with the screen */
+		gap: 0.5rem;
+		align-self: stretch; /* as tall as the screen + gain column */
+	}
+	/* Label sits in the top-left corner, like a printed keycap legend. */
+	.preset {
+		flex-direction: column;
+		align-items: flex-start;
+		justify-content: flex-start;
+		height: 56px; /* just room for a two-line label */
+		padding: 0.5rem 0.55rem;
+		font-family: var(--font-body), monospace;
+		font-size: 13px;
+		font-weight: 700;
+		line-height: 1.2;
+		letter-spacing: 0;
+		text-align: left;
+	}
+
+	/* In 中文 the short labels sit bigger and centred on the key. */
+	:global(html[data-fuzz-lang='zh']) .preset {
+		align-items: center;
+		justify-content: center;
+		padding: 0.25rem;
+		font-size: 17px;
+		text-align: center;
+	}
+
+	/* CRT screen */
+	.bezel {
+		padding: 7px;
+		background: #2a2830;
+		border: 3px solid var(--ink);
+		border-radius: 10px;
+		box-shadow: inset 0 0 0 2px #4a4752, 0 3px 0 var(--ink);
+	}
+	/* Black phosphor screen behind curved glass. */
+	.crt {
+		position: relative;
+		aspect-ratio: 640 / 280;
+		overflow: hidden;
+		border-radius: 22px / 26px;
+		background: radial-gradient(120% 120% at 50% 45%, #0f1a13 0%, #070b08 70%, #020302 100%);
+	}
+	.fx-defs {
+		position: absolute;
+	}
+	/* Everything drawn on the tube: warped like a bulging screen and slightly blooming. */
+	.crt-content {
+		position: absolute;
+		inset: 0;
+		filter: url(#crt-fx);
+	}
+	.crt-content :global(svg),
+	.scope {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+	}
+	/* vignette: dark, rounded edges like an old tube */
+	.crt::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 3;
+		border-radius: inherit;
+		background: radial-gradient(ellipse 82% 88% at 50% 50%, #0000 62%, #0000008c 90%, #000000e6 100%);
+		box-shadow: inset 0 0 26px 8px #000b;
+		pointer-events: none;
+	}
+	/* glass reflection across the top-left of the bulge */
+	.glass {
+		position: absolute;
+		inset: 0;
+		z-index: 4;
+		border-radius: inherit;
+		background:
+			radial-gradient(60% 45% at 28% 18%, #ffffff17, #0000 70%),
+			linear-gradient(160deg, #ffffff0d 0%, #0000 35%);
+		pointer-events: none;
+	}
+	.hud {
+		position: absolute;
+		z-index: 5;
+		font-size: 12px;
+		font-weight: 700;
+		line-height: 1.3;
+		color: #b8ffc9;
+		text-shadow: 0 0 8px #5dff8a99;
+	}
+	.hud b {
+		font-weight: 700;
+	}
+	.tl {
+		top: 20px;
+		left: 34px;
+		display: grid;
+	}
+	.tl [data-wave-hud] {
+		text-decoration: underline;
+		text-underline-offset: 2px;
+	}
+	.tc {
+		top: 18px;
+		left: 50%;
+		transform: translateX(-50%);
+		text-align: center;
+	}
+	.tc .dots {
+		display: block;
+		width: 160px;
+		height: 3px;
+		margin-top: 6px;
+		background: repeating-linear-gradient(90deg, #8dffaa 0 3px, #0000 3px 9px);
+	}
+	.tr {
+		top: 20px;
+		right: 34px;
+	}
+	.bl,
+	.br {
+		bottom: 14px;
+		font-size: 13px;
+		color: #d4ffe0;
+		text-shadow: 0 0 8px #5dff8a99;
+	}
+	.bl { left: 34px; }
+	.br { right: 34px; }
+
+	/* Tag + grip label (Gain, Sample rate, Sample size) */
+	.tagrow {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		gap: 0.6rem;
 	}
-	.btn {
-		height: 36px;
+	.tag {
+		padding: 0.15rem 1.2rem;
 		font-size: 14px;
+		font-weight: 700;
+		text-transform: uppercase;
+		background: var(--face);
+		border: 3px solid var(--ink);
+		border-radius: 4px;
+		box-shadow: inset 2px 2px 0 var(--hi), inset -2px -2px 0 var(--lo);
 	}
-	.display {
-		position: relative;
-		height: 216px;
-		border-width: 3px;
-		border-radius: 8px;
-		overflow: hidden;
-		cursor: default;
+	.tag em {
+		font-style: normal;
+		font-size: 11px;
+		opacity: 0.6;
 	}
-	.display:hover {
-		background: transparent;
+	.grip {
+		width: 22px;
+		height: 12px;
+		background: radial-gradient(circle, #9aa0a8 1.2px, #0000 1.6px) 0 0 / 5px 5px;
+		opacity: 0.8;
 	}
-	.wave {
-		position: absolute;
-		inset: 8px 8px 30px;
-		width: calc(100% - 16px);
-		height: calc(100% - 38px);
-	}
-	.meta {
-		position: absolute;
-		bottom: 9px;
-		font-size: 13px;
-		color: var(--soft);
-	}
-	.meta b {
-		font-weight: 500;
-		color: var(--ink);
-	}
-	.meta.left { left: 16px; }
-	.meta.right { right: 16px; }
 	.gain {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.3rem;
+		display: grid;
+		justify-items: center;
+		gap: 0.5rem;
 		margin-top: 0.9rem;
 	}
 	.gain input {
-		width: 220px;
-	}
-	.gain em {
-		margin-left: 0.4rem;
-		font-style: normal;
-		font-weight: 400;
-		font-size: 12px;
-		color: var(--soft);
+		width: min(380px, 100%);
 	}
 
-	/* Segmented controls */
-	.segmented {
+	/* Segmented keys */
+	.seg {
 		display: grid;
 		grid-auto-flow: column;
 		grid-auto-columns: 1fr;
-		border: 2px solid var(--line);
+		padding: 4px;
+		gap: 4px;
+		background: #cfccc4;
+		border: 3px solid var(--ink);
 		border-radius: 6px;
-		overflow: hidden;
 	}
-	.segmented button {
-		padding: 0.5rem 0.9rem;
-		font: inherit;
-		font-size: 14px;
-		color: var(--ink);
-		white-space: nowrap;
-		background: transparent;
-		border: none;
-		cursor: pointer;
+	.seg .key {
+		height: 40px;
+		padding: 0 0.9rem;
+		font-size: 15px;
+		box-shadow:
+			inset 3px 3px 0 var(--hi),
+			inset -3px -3px 0 var(--lo);
 	}
-	.segmented button + button {
-		border-left: 2px solid var(--line);
-	}
-	.segmented button:hover {
-		background: rgba(239, 232, 214, 0.12);
-	}
-	.segmented button[aria-checked='true'] {
-		color: #000;
-		background: var(--ink);
+	.seg .key[aria-checked='true'] {
+		background: var(--on);
+		box-shadow:
+			inset 3px 3px 0 #fff8,
+			inset -3px -3px 0 #0003;
 	}
 	.waves {
-		width: min(100%, 520px);
-		margin: 1.5rem auto 2.25rem;
+		width: min(100%, 660px);
+		margin: 1.4rem auto 1.6rem;
 	}
 
-	/* Parameter sliders */
+	/* ---- Parameter cards ---- */
+	/* three columns of cards (two rows) at the header width */
 	.params {
 		display: grid;
-		grid-template-columns: repeat(6, minmax(0, 1fr));
-		gap: 1.25rem 1rem;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.7rem;
 	}
-	.group + .group {
-		margin-top: 1.1rem;
+	.col {
+		display: grid;
+		align-content: start;
+		gap: 0.7rem;
+		min-width: 0; /* let cards shrink to the column instead of the sliders' natural width */
 	}
-	.group-title {
-		display: block;
-		margin: 0 0 0.7rem;
-		font-size: 13.5px;
+	.card {
+		min-width: 0;
+		padding: 0 0.55rem 0.3rem;
+		background: #faf8f2;
+		border: 3px solid var(--ink);
+		border-radius: 6px;
+		box-shadow: 0 3px 0 var(--ink);
+	}
+	.card-head {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		margin: 0 -0.55rem 0.3rem;
+		padding: 0.35rem 0.3rem;
+		border-bottom: 3px solid var(--ink);
+	}
+	.card-head .grip {
+		flex-shrink: 0;
+		width: 12px;
+		height: 20px;
+		border: 2px solid var(--ink);
+		background: radial-gradient(circle, var(--ink) 1.2px, #0000 1.6px) 0 0 / 5px 5px, var(--face);
+		opacity: 1;
+	}
+	.tab {
+		flex: 1;
+		min-width: 0;
+		padding: 0.1rem 0.15rem;
+		font-size: 11px;
 		font-weight: 700;
-		color: var(--ink);
+		letter-spacing: -0.02em;
+		text-align: center;
+		text-transform: uppercase;
 		white-space: nowrap;
-	}
-	.group-title.small {
-		margin: 0;
-		font-size: 14px;
+		overflow: hidden;
+		text-overflow: clip;
+		background: var(--c);
+		border: 2px solid var(--ink);
+		box-shadow: inset 2px 2px 0 #fff7;
 	}
 	.slider {
 		display: grid;
-		gap: 0.3rem;
-		margin-bottom: 0.85rem;
+		grid-template-columns: minmax(48px, 46%) 1fr;
+		align-items: center;
+		gap: 0.45rem;
+		padding: 0.5rem 0.1rem;
+		border-bottom: 2px dashed #cfccc4;
 		cursor: pointer;
 	}
-	/* Range input drawn as the wireframe track + round knob. */
+	.slider:last-child {
+		border-bottom: none;
+	}
+	.slider-text {
+		display: flex;
+		flex-direction: column;
+		min-width: 0;
+		line-height: 1.2;
+		font-family: var(--font-body), monospace;
+	}
+	.slider-label {
+		font-size: 11.5px;
+		font-weight: 700;
+	}
+	.slider-value {
+		min-height: 1.2em;
+		font-size: 10.5px;
+		color: #55525c;
+		overflow-wrap: anywhere;
+	}
+
+	/* ---- Pixel slider: dark-rimmed track, coloured fill to the knob, bevelled knob ---- */
 	input[type='range'] {
+		--fill: 50%;
 		width: 100%;
-		height: 18px;
+		min-width: 0;
+		height: 22px;
 		margin: 0;
 		background: transparent;
 		-webkit-appearance: none;
@@ -405,123 +724,130 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 		cursor: pointer;
 	}
 	input[type='range']::-webkit-slider-runnable-track {
-		height: 8px;
-		border: 2px solid var(--line);
+		height: 10px;
+		background: linear-gradient(90deg, var(--c, #3fd04a) var(--fill), #f4f2ec var(--fill));
+		border: 2px solid var(--ink);
 		border-radius: 999px;
 	}
 	input[type='range']::-moz-range-track {
-		height: 4px;
-		border: 2px solid var(--line);
+		height: 6px;
+		background: linear-gradient(90deg, var(--c, #3fd04a) var(--fill), #f4f2ec var(--fill));
+		border: 2px solid var(--ink);
 		border-radius: 999px;
 	}
 	input[type='range']::-webkit-slider-thumb {
-		width: 16px;
-		height: 16px;
-		margin-top: -6px;
-		background: #0b0b0d;
+		width: 14px;
+		height: 20px;
+		margin-top: -7px;
+		background: var(--face);
 		border: 2px solid var(--ink);
-		border-radius: 50%;
+		border-radius: 3px;
+		box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 var(--lo);
 		-webkit-appearance: none;
 		appearance: none;
 	}
 	input[type='range']::-moz-range-thumb {
-		width: 12px;
-		height: 12px;
-		background: #0b0b0d;
+		width: 10px;
+		height: 16px;
+		background: var(--face);
 		border: 2px solid var(--ink);
-		border-radius: 50%;
-	}
-	input[type='range']:hover::-webkit-slider-thumb {
-		background: var(--hot);
-	}
-	input[type='range']:hover::-moz-range-thumb {
-		background: var(--hot);
-	}
-	.slider-text {
-		display: flex;
-		flex-direction: column;
-		line-height: 1.25;
-	}
-	.slider-label {
-		font-size: 12.5px;
-		font-weight: 500;
-	}
-	.slider-value {
-		min-height: 1.25em;
-		font-size: 11px;
-		color: var(--soft);
+		border-radius: 3px;
+		box-shadow: inset 2px 2px 0 #fff, inset -2px -2px 0 var(--lo);
 	}
 
-	/* Output format */
+	/* ---- Output format ---- */
 	.format {
 		display: flex;
 		justify-content: center;
 		flex-wrap: wrap;
-		gap: 1.5rem 3rem;
-		margin: 2rem 0 0;
+		gap: 1.25rem 3rem;
+		margin: 1.75rem 0 0;
 	}
 	.format-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.5rem;
-		min-width: 240px;
+		display: grid;
+		justify-items: center;
+		gap: 0.55rem;
+		min-width: 300px;
 	}
-	.format-item .group-title {
-		margin: 0;
-	}
-	.format-item .segmented {
+	.format-item .seg {
 		width: 100%;
 	}
 
-	/* Actions */
+	/* ---- Actions ---- */
 	.actions {
 		display: flex;
 		justify-content: center;
 		gap: 1.25rem;
-		margin-top: 2.25rem;
+		margin-top: 1.9rem;
 	}
 	.big {
-		height: 58px;
+		position: relative;
+		height: 66px;
+		min-width: 220px;
 		padding: 0 1.5rem;
-		min-width: 130px;
-		font-size: 19px;
-		font-weight: 700;
-		border-width: 3px;
-		border-radius: 8px;
+		font-size: 22px;
+		border-radius: 6px;
 	}
+	.big :global(svg) {
+		width: 34px;
+		height: auto;
+	}
+	/* corner screws */
+	.big::before,
+	.big::after {
+		content: '';
+		position: absolute;
+		top: 6px;
+		width: 5px;
+		height: 5px;
+		background: #7a7882;
+		box-shadow: 0 43px 0 #7a7882;
+	}
+	.big::before { left: 6px; }
+	.big::after { right: 6px; }
 	.play {
-		min-width: 200px;
+		min-width: 260px;
+		background: #f8c62e;
+		box-shadow:
+			inset 3px 3px 0 #fff3b0,
+			inset -3px -3px 0 #c99a10,
+			0 3px 0 var(--ink);
+	}
+	.play:hover {
+		background: #ffd84d;
+	}
+	.play :global(svg) {
+		width: 22px;
 	}
 	.download {
 		display: flex;
 		justify-content: center;
-		margin-top: 1.25rem;
+		margin-top: 1.1rem;
 	}
 	.dl {
-		flex-direction: column;
-		min-width: 200px;
-		height: 64px;
+		min-width: 280px;
+		height: 72px;
+	}
+	.dl-text {
+		display: grid;
+		justify-items: start;
+		line-height: 1.1;
 	}
 	.dl small {
-		font-size: 11px;
-		font-weight: 400;
-		opacity: 0.7;
+		font-size: 13px;
+		text-transform: none;
+		opacity: 0.8;
 	}
 
-	@media (max-width: 860px) {
-		.params {
-			grid-template-columns: repeat(3, minmax(0, 1fr));
-		}
-	}
-	@media (max-width: 600px) {
-		.wire {
-			padding: 1.25rem 1rem 1.5rem;
-		}
+	/* ---- Narrower screens ---- */
+	@media (max-width: 760px) {
 		.top {
 			grid-template-columns: 1fr 1fr;
 		}
-		.display-col {
+		.presets {
+			grid-auto-rows: auto;
+		}
+		.screen-col {
 			grid-column: 1 / -1;
 			grid-row: 1;
 		}
@@ -534,6 +860,407 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 		.big {
 			min-width: 0;
 			flex: 1;
+			font-size: 18px;
+		}
+		.format-item {
+			min-width: 0;
+			width: 100%;
+		}
+	}
+	@media (max-width: 480px) {
+		.device {
+			padding: 1rem 0.75rem 1.25rem;
+		}
+		.top,
+		.presets,
+		.preset {
+			min-width: 0;
+		}
+		.key {
+			letter-spacing: 0;
+		}
+		.preset {
+			flex-direction: row;
+			justify-content: flex-start;
+			height: 38px;
+			min-height: 0;
+			padding: 0 0.5rem;
+			font-size: 11px;
+			gap: 0.4rem;
+			text-align: left;
+		}
+		.preset span {
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+		/* wave + format keys wrap to two per row */
+		.seg {
+			grid-auto-flow: row;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.seg .key {
+			min-width: 0;
+			height: 36px;
+			padding: 0 0.4rem;
+			font-size: 12px;
+		}
+		.big {
+			height: 56px;
+			padding: 0 0.8rem;
+			font-size: 15px;
+		}
+		.big :global(svg) {
+			width: 24px;
+		}
+		.dl {
+			min-width: 0;
+			width: 100%;
+		}
+		.gain input {
+			width: 100%;
+		}
+		.params {
+			grid-template-columns: 1fr;
+		}
+		.hud.tl, .hud.tc, .hud.tr {
+			font-size: 9px;
+		}
+		.tc .dots {
+			width: 90px;
+		}
+	}
+	/* =====================================================================
+	   Field-device skin: battered grey paint over metal, ivory keypad keys,
+	   bolted dark modules, recessed slider slots. Overrides the rules above.
+	   ===================================================================== */
+	.device {
+		--ink: #141516;
+		--face: #d9d5c8;
+		--hi: #f4f1e6;
+		--lo: #9b988c;
+		color: var(--ink);
+		background:
+			radial-gradient(5% 3.5% at 2.5% 18%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(2.5% 2% at 4.5% 21%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(4% 2.6% at 97.5% 41%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(2% 1.6% at 96% 45%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(7% 2.2% at 38% 99.2%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(3% 1.5% at 44% 98.8%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(3% 2% at 64% 0.9%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(2.4% 1.6% at 1.8% 77%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(3.2% 2% at 98.3% 88%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(1.6% 1.2% at 22% 1%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(2.2% 1.4% at 80% 99.3%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(1.4% 1% at 99% 12%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(1.2% 0.9% at 12% 60%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(0.9% 0.7% at 57% 44%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(1% 0.8% at 88% 68%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(0.8% 0.6% at 30% 30%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(1.1% 0.8% at 71% 83%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			radial-gradient(0.7% 0.5% at 48% 14%, #a9aba8 55%, #6d6f6e 62%, #0000 66%),
+			linear-gradient(180deg, #7a4a1e66, #0000) 2.6% 20% / 0.5% 18% no-repeat,
+			linear-gradient(180deg, #7a4a1e44, #0000) 3.4% 22% / 0.5% 10% no-repeat,
+			linear-gradient(180deg, #7a4a1e55, #0000) 97.4% 44% / 0.5% 22% no-repeat,
+			linear-gradient(180deg, #7a4a1e44, #0000) 57% 45% / 0.5% 9% no-repeat,
+			linear-gradient(180deg, #7a4a1e44, #0000) 12.2% 61% / 0.5% 12% no-repeat,
+			linear-gradient(180deg, #6b3f1a55, #0000) 1.6% 3% / 0.5% 14% no-repeat,
+			linear-gradient(180deg, #6b3f1a55, #0000) 98.4% 3% / 0.5% 16% no-repeat,
+			linear-gradient(180deg, #7a4a1e44, #0000) 64% 2% / 0.5% 8% no-repeat,
+			radial-gradient(9% 6% at 2% 19%, #7a4a1e88, #0000 70%),
+			radial-gradient(8% 5% at 98% 42%, #7a4a1e77, #0000 70%),
+			radial-gradient(14% 8% at 99% 99%, #6b3f1a99, #0000 70%),
+			radial-gradient(12% 8% at 1% 1%, #6b3f1a80, #0000 70%),
+			radial-gradient(6% 4% at 38% 99%, #6b3f1a77, #0000 70%),
+			radial-gradient(5% 3% at 64% 1%, #7a4a1e66, #0000 70%),
+			radial-gradient(3% 2% at 57% 44%, #7a4a1e55, #0000 70%),
+			radial-gradient(3% 2% at 12% 60%, #7a4a1e55, #0000 70%),
+			radial-gradient(22% 14% at 30% 60%, #00000040, #0000 70%),
+			radial-gradient(16% 10% at 82% 70%, #00000038, #0000 70%),
+			radial-gradient(18% 12% at 74% 22%, #ffffff14, #0000 70%),
+			radial-gradient(10% 7% at 50% 50%, #ffffff0d, #0000 70%),
+			linear-gradient(121deg, #0000 47.6%, #d4d6d340 47.75% 47.9%, #0000 48.050000000000004%),
+			linear-gradient(31deg, #0000 70.8%, #d4d6d333 70.95% 71.1%, #0000 71.25%),
+			linear-gradient(162deg, #0000 22.8%, #d4d6d32e 22.95% 23.1%, #0000 23.25%),
+			linear-gradient(68deg, #0000 35%, #d4d6d32a 35.15% 35.3%, #0000 35.45%),
+			linear-gradient(140deg, #0000 62%, #0000004d 62.15% 62.3%, #0000 62.45%),
+			linear-gradient(12deg, #0000 84%, #d4d6d326 84.15% 84.3%, #0000 84.45%),
+			linear-gradient(104deg, #0000 18%, #00000040 18.15% 18.3%, #0000 18.45%),
+			linear-gradient(51deg, #0000 55%, #d4d6d322 55.15% 55.3%, #0000 55.45%),
+			linear-gradient(180deg, #6c6f73 0%, #55585c 50%, #404245 100%);
+		border-color: #111213;
+		box-shadow:
+			inset 4px 4px 0 #8a8d91,
+			inset -4px -4px 0 #2a2b2e,
+			inset 8px 8px 0 #66696d,
+			inset -8px -8px 0 #36383b,
+			0 8px 0 #000a,
+			0 14px 30px -8px #000c;
+	}
+	/* blotchy grime, scuffed paint and fine grain over the whole panel */
+	.device::before {
+		opacity: 1;
+		mix-blend-mode: normal;
+		background:
+			url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27420%27%20height%3D%27420%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.022%27%20numOctaves%3D%274%27%20seed%3D%273%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20values%3D%270%200%200%200%200.06%20%200%200%200%200%200.055%20%200%200%200%200%200.05%20%201.5%200%200%200%20-0.78%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23n)%27%2F%3E%3C%2Fsvg%3E") 0 0 / 420px 420px,
+			url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.05%27%20numOctaves%3D%273%27%20seed%3D%279%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20values%3D%270%200%200%200%200.74%20%200%200%200%200%200.75%20%200%200%200%200%200.74%20%201.8%200%200%200%20-1.12%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23n)%27%2F%3E%3C%2Fsvg%3E") 0 0 / 300px 300px,
+			url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27160%27%20height%3D%27160%27%3E%3Cfilter%20id%3D%27n%27%3E%3CfeTurbulence%20type%3D%27fractalNoise%27%20baseFrequency%3D%270.9%27%20numOctaves%3D%272%27%20seed%3D%271%27%20stitchTiles%3D%27stitch%27%2F%3E%3CfeColorMatrix%20values%3D%270%200%200%200%200%20%200%200%200%200%200%20%200%200%200%200%200%20%200.55%200%200%200%20-0.17%27%2F%3E%3C%2Ffilter%3E%3Crect%20width%3D%27100%25%27%20height%3D%27100%25%27%20filter%3D%27url(%23n)%27%2F%3E%3C%2Fsvg%3E") 0 0 / 160px 160px;
+	}
+	/* round slotted screws in the corners */
+	.device::after {
+		inset: 10px;
+		-webkit-mask: none;
+		mask: none;
+		filter: none;
+		background:
+			radial-gradient(circle, #2b2c2e 0 1.5px, #9c9ea1 1.5px 5px, #0000 7px) 0 0 / 16px 16px no-repeat,
+			radial-gradient(circle, #2b2c2e 0 1.5px, #9c9ea1 1.5px 5px, #0000 7px) 100% 0 / 16px 16px no-repeat,
+			radial-gradient(circle, #2b2c2e 0 1.5px, #9c9ea1 1.5px 5px, #0000 7px) 0 100% / 16px 16px no-repeat,
+			radial-gradient(circle, #2b2c2e 0 1.5px, #9c9ea1 1.5px 5px, #0000 7px) 100% 100% / 16px 16px no-repeat;
+	}
+
+	/* Nameplate */
+	.plate {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin: 0 0.4rem 1.1rem;
+		padding: 0.4rem 0.8rem;
+		color: #d9cfa6;
+		background: linear-gradient(180deg, #25272a, #1b1c1e);
+		border: 3px solid #0d0e0f;
+		border-radius: 4px;
+		box-shadow: inset 2px 2px 0 #3b3e42, inset -2px -2px 0 #111213, 0 2px 0 #0006;
+	}
+	.brand {
+		font-size: 16px;
+		font-weight: 700;
+		letter-spacing: 0.2em;
+	}
+	.model {
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		opacity: 0.7;
+	}
+	.leds {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-left: auto;
+		font-size: 10px;
+		letter-spacing: 0.1em;
+	}
+	.led {
+		width: 9px;
+		height: 9px;
+		margin-left: 0.5rem;
+		border: 2px solid #0d0e0f;
+		border-radius: 50%;
+	}
+	.led.pwr {
+		background: #8cff7a;
+		box-shadow: 0 0 6px #8cff7a, 0 0 2px #fff inset;
+	}
+	.led.sig {
+		background: #5a1d18;
+		transition: background 0.05s, box-shadow 0.05s;
+	}
+	.plate :global(.led.sig.on) {
+		background: #ff4a3a;
+		box-shadow: 0 0 8px #ff4a3a, 0 0 2px #fff inset;
+	}
+	.vent {
+		width: 70px;
+		height: 14px;
+		background: repeating-linear-gradient(90deg, #0a0b0c 0 4px, #0000 4px 8px);
+		border-radius: 2px;
+	}
+
+	/* Ivory keypad keys */
+	.key {
+		background:
+			radial-gradient(40% 30% at 80% 85%, #6b5a3a1f, #0000 70%),
+			linear-gradient(180deg, #e2dcc7, #cfc7ae);
+		border-color: var(--ink);
+		border-radius: 7px;
+		box-shadow:
+			inset 2px 2px 0 var(--hi),
+			inset -2px -3px 0 var(--lo),
+			0 3px 0 var(--ink);
+	}
+	.key:hover {
+		background: linear-gradient(180deg, #ebe5d1, #d9d2ba);
+	}
+
+	/* Recessed slot holding the segmented keys */
+	.seg {
+		background: #202224;
+		border-color: #0d0e0f;
+		box-shadow: inset 0 3px 6px #000c;
+	}
+	.seg .key {
+		box-shadow:
+			inset 2px 2px 0 var(--hi),
+			inset -2px -3px 0 var(--lo);
+	}
+	.seg .key[aria-checked='true'] {
+		background: var(--on);
+		box-shadow:
+			inset 2px 2px 0 #fff6,
+			inset -2px -3px 0 #0004;
+	}
+
+	/* Manila label tags + vent slots beside them */
+	.tag {
+		color: #1b1a16;
+		background: linear-gradient(180deg, #d8c99b, #c7b684);
+		border: 2px solid #141516;
+		border-radius: 2px;
+		box-shadow: 0 2px 0 #0007;
+	}
+	.grip {
+		width: 26px;
+		height: 12px;
+		background: repeating-linear-gradient(90deg, #131415 0 3px, #0000 3px 6px);
+		opacity: 0.9;
+	}
+
+	/* CRT housing: rubber bezel with screws */
+	.bezel {
+		padding: 11px;
+		background:
+			radial-gradient(circle, #1a1b1c 0 1.5px, #7e8084 1.5px 4px, #0000 4.5px) 4px 4px / 12px 12px no-repeat,
+			radial-gradient(circle, #1a1b1c 0 1.5px, #7e8084 1.5px 4px, #0000 4.5px) calc(100% - 4px) 4px / 12px 12px no-repeat,
+			radial-gradient(circle, #1a1b1c 0 1.5px, #7e8084 1.5px 4px, #0000 4.5px) 4px calc(100% - 4px) / 12px 12px no-repeat,
+			radial-gradient(circle, #1a1b1c 0 1.5px, #7e8084 1.5px 4px, #0000 4.5px) calc(100% - 4px) calc(100% - 4px) / 12px 12px no-repeat,
+			linear-gradient(180deg, #2b2d30, #1e1f21);
+		border-color: #0d0e0f;
+		border-radius: 12px;
+		box-shadow: inset 0 0 0 2px #3b3e42, 0 4px 0 #000a;
+	}
+
+	/* Bolted dark modules for the parameter groups */
+	.card {
+		background:
+			radial-gradient(circle, #141516 0 1px, #8e9094 1px 3px, #0000 3.5px) 3px 3px / 9px 9px no-repeat,
+			radial-gradient(circle, #141516 0 1px, #8e9094 1px 3px, #0000 3.5px) calc(100% - 3px) 3px / 9px 9px no-repeat,
+			radial-gradient(circle, #141516 0 1px, #8e9094 1px 3px, #0000 3.5px) 3px calc(100% - 3px) / 9px 9px no-repeat,
+			radial-gradient(circle, #141516 0 1px, #8e9094 1px 3px, #0000 3.5px) calc(100% - 3px) calc(100% - 3px) / 9px 9px no-repeat,
+			linear-gradient(180deg, #36383c, #2a2c2f);
+		border-color: #0d0e0f;
+		box-shadow:
+			inset 2px 2px 0 #4c4f54,
+			inset -2px -2px 0 #1b1c1e,
+			0 3px 0 #0009;
+	}
+	.card-head {
+		border-bottom-color: #0d0e0f;
+	}
+	.card-head .grip {
+		width: 12px;
+		background: repeating-linear-gradient(180deg, #0d0e0f 0 2px, #4c4f54 2px 4px);
+		border-color: #0d0e0f;
+		opacity: 1;
+	}
+	.tab {
+		color: #151617;
+		border-color: #0d0e0f;
+		box-shadow: inset 2px 2px 0 #fff5, inset -2px -2px 0 #0003;
+	}
+	.slider {
+		border-bottom-color: #47494d;
+	}
+	.slider-label {
+		color: #e7e0c8;
+	}
+	.slider-value {
+		color: #a9a38b;
+	}
+
+	/* Recessed slider slots with an ivory cap */
+	input[type='range']::-webkit-slider-runnable-track {
+		background: linear-gradient(90deg, var(--c, #86b35e) var(--fill), #141516 var(--fill));
+		border-color: #0a0b0c;
+		box-shadow: inset 0 2px 0 #0008;
+	}
+	input[type='range']::-moz-range-track {
+		background: linear-gradient(90deg, var(--c, #86b35e) var(--fill), #141516 var(--fill));
+		border-color: #0a0b0c;
+	}
+	input[type='range']::-webkit-slider-thumb {
+		background: linear-gradient(180deg, #e2dcc7, #c9c1a8);
+		border-color: #0a0b0c;
+		box-shadow: inset 2px 2px 0 #f4efdd, inset -2px -2px 0 #9d967f;
+	}
+	input[type='range']::-moz-range-thumb {
+		background: linear-gradient(180deg, #e2dcc7, #c9c1a8);
+		border-color: #0a0b0c;
+	}
+
+	/* Worn amber PLAY key */
+	.play {
+		background:
+			radial-gradient(35% 40% at 85% 80%, #5a3a0a33, #0000 70%),
+			linear-gradient(180deg, #e6b546, #cc9424);
+		box-shadow:
+			inset 2px 2px 0 #f7da8c,
+			inset -2px -3px 0 #9a6c14,
+			0 3px 0 var(--ink);
+	}
+	.play:hover {
+		background: linear-gradient(180deg, #efc256, #d69f2e);
+	}
+	.big::before,
+	.big::after {
+		background: #6b6d70;
+		box-shadow: 0 43px 0 #6b6d70;
+	}
+
+	/* Card + format titles: tiny black CRT strips with phosphor text in the group colour. */
+	.tab,
+	.format .tag {
+		position: relative;
+		padding: 0.22rem 0.3rem;
+		font-size: 12px;
+		letter-spacing: 0.06em;
+		color: color-mix(in srgb, var(--c) 55%, #fff);
+		text-shadow:
+			0 0 2px var(--c),
+			0 0 6px var(--c),
+			0 0 12px color-mix(in srgb, var(--c) 60%, transparent);
+		background:
+			repeating-linear-gradient(180deg, #0000 0 2px, #0000004d 2px 3px),
+			radial-gradient(120% 160% at 50% 45%, color-mix(in srgb, var(--c) 14%, #0b0e0c) 0%, #060807 75%, #020302 100%);
+		border: 2px solid #0a0b0c;
+		border-radius: 5px / 7px;
+		box-shadow:
+			inset 0 0 8px #000,
+			inset 0 1px 0 #ffffff14,
+			0 0 0 2px #2a2c2f,
+			0 1px 0 3px #0d0e0f;
+	}
+	.format .tag {
+		padding: 0.3rem 0.9rem;
+		font-size: 13px;
+	}
+	/* a soft glass glint across the top */
+	.tab::after,
+	.format .tag::after {
+		content: '';
+		position: absolute;
+		inset: 1px 6% 55%;
+		border-radius: 4px;
+		background: linear-gradient(180deg, #ffffff12, #0000);
+		pointer-events: none;
+	}
+
+	@media (max-width: 760px) {
+		.plate {
+			flex-wrap: wrap;
+			gap: 0.4rem 0.8rem;
+		}
+		.vent {
+			display: none;
 		}
 	}
 </style>
@@ -546,19 +1273,64 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 		const $ = <T extends Element>(sel: string) => root.querySelector<T>(sel);
 		const $$ = <T extends Element>(sel: string) => [...root.querySelectorAll<T>(sel)];
 
-		const canvas = $<HTMLCanvasElement>('canvas.wave')!;
+		const canvas = $<HTMLCanvasElement>('canvas.scope')!;
 		const ctx = canvas.getContext('2d')!;
 		const download = $<HTMLAnchorElement>('[data-download]')!;
+		const WAVES = ['SQUARE', 'SAWTOOTH', 'SINE', 'NOISE'];
+
+		// Barrel-distortion map for the curved glass: each pixel says how far out to
+		// sample (red = x, green = y, 128 = no shift), growing toward the edges.
+		const warp = root.querySelector('[data-warp-map]');
+		if (warp) {
+			const m = document.createElement('canvas');
+			m.width = 128;
+			m.height = 64;
+			const g = m.getContext('2d')!;
+			const img = g.createImageData(m.width, m.height);
+			for (let y = 0; y < m.height; y++)
+				for (let x = 0; x < m.width; x++) {
+					const nx = (x / (m.width - 1)) * 2 - 1;
+					const ny = (y / (m.height - 1)) * 2 - 1;
+					const r2 = nx * nx + ny * ny;
+					const i = (y * m.width + x) * 4;
+					img.data[i] = 128 + Math.max(-127, Math.min(127, nx * r2 * 64));
+					img.data[i + 1] = 128 + Math.max(-127, Math.min(127, ny * r2 * 64));
+					img.data[i + 2] = 128;
+					img.data[i + 3] = 255;
+				}
+			g.putImageData(img, 0, 0);
+			warp.setAttribute('href', m.toDataURL());
+		}
+
+		// Play the current sound and light the SIG LED for as long as it lasts.
+		const sig = root.querySelector<HTMLElement>('[data-sig]');
+		let sigTimer = 0;
+		const playSound = () => {
+			wave.getAudio().play();
+			if (!sig) return;
+			sig.classList.add('on');
+			clearTimeout(sigTimer);
+			const ms = (wave.buffer.length / params.sample_rate) * 1000;
+			sigTimer = window.setTimeout(() => sig.classList.remove('on'), Math.max(120, ms));
+		};
 
 		let params: SoundParams = newParams();
 		let wave = render(params);
 		let soundName = 'sound';
+
+		// Coloured fill up to the knob (CSS reads --fill).
+		const fill = (input: HTMLInputElement) => {
+			const min = Number(input.min);
+			const max = Number(input.max);
+			input.style.setProperty('--fill', `${((Number(input.value) - min) / (max - min)) * 100}%`);
+		};
 
 		// Push the current parameters into every control.
 		const syncControls = () => {
 			for (const input of $$<HTMLInputElement>('input[data-param]')) {
 				const p = input.dataset.param!;
 				input.value = String(params[p]);
+				fill(input);
 				const out = $<HTMLElement>(`[data-out="${p}"]`);
 				if (out) out.textContent = label(p, Number(params[p]));
 			}
@@ -571,44 +1343,100 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 			mark('data-size', params.sample_size);
 		};
 
-		// Waveform scope: one vertical line per pixel column (min..max of its samples).
-		const drawWave = () => {
-			const { width: w, height: h } = canvas;
-			const data = wave.buffer;
-			ctx.clearRect(0, 0, w, h);
-			ctx.strokeStyle = 'rgba(239, 232, 214, 0.18)';
-			ctx.beginPath();
-			ctx.moveTo(0, h / 2);
-			ctx.lineTo(w, h / 2);
-			ctx.stroke();
-			if (!data.length) return;
-			ctx.fillStyle = '#ff3a6e';
-			const per = data.length / w;
-			for (let x = 0; x < w; x++) {
+		// Size the canvas to its on-screen pixels (sharp on retina), but keep drawing
+		// in a fixed 640 x 280 space that matches the scene.
+		const W = 640;
+		const H = 280;
+		const fitCanvas = () => {
+			const r = canvas.getBoundingClientRect();
+			const dpr = Math.min(window.devicePixelRatio || 1, 3);
+			canvas.width = Math.max(1, Math.round(r.width * dpr));
+			canvas.height = Math.max(1, Math.round(r.height * dpr));
+			ctx.setTransform(canvas.width / W, 0, 0, canvas.height / H, 0, 0);
+		};
+
+		// CRT: glowing waveform right across the screen.
+		const HZ = 226; // same horizon as the floor grid in the scene
+		const MID = 146; // waveform centre line (clear of the HUD text)
+		const AMP = 52;
+
+		// One pass of the waveform: a 1-unit column per x, from its min to max sample.
+		const traceWave = (data: number[]) => {
+			const per = data.length / W;
+			for (let c = 0; c < W; c++) {
 				let lo = 1;
 				let hi = -1;
-				const end = Math.min(data.length, Math.floor((x + 1) * per));
-				for (let i = Math.floor(x * per); i < end; i++) {
+				const end = Math.min(data.length, Math.floor((c + 1) * per));
+				for (let i = Math.floor(c * per); i < end; i++) {
 					if (data[i] < lo) lo = data[i];
 					if (data[i] > hi) hi = data[i];
 				}
 				if (hi < lo) continue;
-				const y1 = ((1 - Math.min(1, hi)) / 2) * h;
-				const y2 = ((1 - Math.max(-1, lo)) / 2) * h;
-				ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+				const yt = MID - Math.min(1, hi) * AMP;
+				const yb = MID - Math.max(-1, lo) * AMP;
+				ctx.fillRect(c, yt, 1, Math.max(1.2, yb - yt));
 			}
 		};
 
-		// Re-render after any change: waveform, stats, download link; optionally play.
-		const update = (playNow: boolean) => {
-			wave = render(params);
-			$<HTMLElement>('[data-samples]')!.textContent = String(wave.buffer.length);
-			$<HTMLElement>('[data-clipped]')!.textContent = String(wave.clipping);
-			download.href = wave.dataURI;
-			download.download = `fuzz-pedal-${soundName}.wav`;
-			showSize();
-			drawWave();
-			if (playNow) wave.getAudio().play();
+		// CRT: glowing phosphor waveform across the middle, mirrored faintly in the floor.
+		const drawScope = () => {
+			const data = wave.buffer;
+			ctx.clearRect(0, 0, W, H);
+			if (!data.length) return;
+
+			// wide soft halo, then a tighter glow, then a bright core
+			ctx.save();
+			ctx.fillStyle = '#5dff8a';
+			ctx.shadowColor = '#3dff74';
+			ctx.shadowBlur = 22;
+			ctx.globalAlpha = 0.55;
+			traceWave(data);
+			ctx.restore();
+			ctx.save();
+			ctx.fillStyle = '#8dffb0';
+			ctx.shadowColor = '#5dff8a';
+			ctx.shadowBlur = 8;
+			traceWave(data);
+			ctx.restore();
+
+			// reflection on the floor: flipped about the horizon, squashed, fading out
+			ctx.save();
+			ctx.beginPath();
+			ctx.rect(0, HZ, W, H - HZ);
+			ctx.clip();
+			const k = 0.32;
+			ctx.transform(1, 0, 0, -k, 0, (1 + k) * HZ);
+			ctx.globalAlpha = 0.4;
+			ctx.fillStyle = '#7dffa0';
+			ctx.shadowColor = '#5dff8a';
+			ctx.shadowBlur = 10;
+			traceWave(data);
+			ctx.restore();
+			ctx.save();
+			ctx.globalCompositeOperation = 'destination-out';
+			const fade = ctx.createLinearGradient(0, HZ, 0, H);
+			fade.addColorStop(0, 'rgba(0,0,0,0.1)');
+			fade.addColorStop(1, 'rgba(0,0,0,1)');
+			ctx.fillStyle = fade;
+			ctx.fillRect(0, HZ, W, H - HZ);
+			ctx.restore();
+		};
+
+		// Match the canvas to its displayed size now and whenever it changes.
+		fitCanvas();
+		new ResizeObserver(() => {
+			fitCanvas();
+			drawScope();
+		}).observe(canvas);
+
+		const pad = (n: number, len: number) => String(n).padStart(len, '0');
+		const updateHud = () => {
+			$<HTMLElement>('[data-samples-hud]')!.textContent = pad(wave.buffer.length, 6);
+			$<HTMLElement>('[data-clip-hud]')!.textContent = pad(wave.clipping, 3);
+			$<HTMLElement>('[data-rate-hud]')!.textContent = `${Math.round(params.sample_rate / 1000)}K`;
+			$<HTMLElement>('[data-bit-hud]')!.textContent = String(params.sample_size);
+			$<HTMLElement>('[data-wave-hud]')!.textContent = WAVES[params.wave_type] ?? '';
+			$<HTMLElement>('[data-name-hud]')!.textContent = soundName.toUpperCase();
 		};
 
 		// "file size: 6kb" / "文件大小: 6kb", in the current page language.
@@ -618,6 +1446,19 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 			$<HTMLElement>('[data-filesize]')!.textContent = (zhOn ? '文件大小: ' : 'file size: ') + kb + 'kb';
 		}
 		document.addEventListener('fuzz-lang', showSize);
+
+		// Re-render after any change: screen, stats, download link; optionally play.
+		const update = (playNow: boolean) => {
+			wave = render(params);
+			$<HTMLElement>('[data-samples]')!.textContent = String(wave.buffer.length);
+			$<HTMLElement>('[data-clipped]')!.textContent = String(wave.clipping);
+			download.href = wave.dataURI;
+			download.download = `fuzz-pedal-${soundName}.wav`;
+			showSize();
+			updateHud();
+			drawScope();
+			if (playNow) playSound();
+		};
 
 		const reroll = (method: string, name: string) => {
 			const keep = { sound_vol: params.sound_vol, sample_rate: params.sample_rate, sample_size: params.sample_size };
@@ -639,11 +1480,12 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 			}),
 		);
 
-		// Sliders: update the label live, re-render and play when released.
+		// Sliders: live label + fill, re-render and play when released.
 		$$<HTMLInputElement>('input[data-param]').forEach((input) => {
 			const p = input.dataset.param!;
 			input.addEventListener('input', () => {
 				params[p] = Number(input.value);
+				fill(input);
 				const out = $<HTMLElement>(`[data-out="${p}"]`);
 				if (out) out.textContent = label(p, params[p] as number);
 			});
@@ -667,12 +1509,12 @@ const SIGNED = ['p_freq_ramp', 'p_freq_dramp', 'p_arp_mod', 'p_duty_ramp', 'p_ph
 		$$<HTMLButtonElement>('[data-action]').forEach((b) =>
 			b.addEventListener('click', () => {
 				const action = b.dataset.action!;
-				if (action === 'play') wave.getAudio().play();
+				if (action === 'play') playSound();
 				else reroll(action, action);
 			}),
 		);
 
-		// Start with a coin sound so there is something to see (not played until clicked).
+		// Start with a coin sound so the screen has something on it (not played until clicked).
 		params.sound_vol = 0.25;
 		apply(params, 'pickupCoin');
 		soundName = 'pickup';

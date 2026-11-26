@@ -36,5 +36,14 @@ export default defineConfig({
 			styles: ['normal'],
 			fallbacks: ['Arial Rounded MT Bold', 'sans-serif'],
 		},
+		{
+			// Chunky pixel face for the Fuzz Pedal editor labels and buttons.
+			provider: fontProviders.google(),
+			name: 'Silkscreen',
+			cssVariable: '--font-pixel',
+			weights: [400, 700],
+			styles: ['normal'],
+			fallbacks: ['monospace'],
+		},
 	],
 });

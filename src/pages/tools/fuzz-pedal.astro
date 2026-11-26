@@ -71,6 +71,24 @@ import LangToggle from '../../components/LangToggle.astro';
 	</body>
 </html>
 
+<style is:global>
+	/* 卓特悦动黑 ZT YueDongHei (SIL OFL 1.1, by 卓特视觉 / Droit Visual), shipped
+	   unmodified. It is only requested once the page is switched to 中文, because
+	   nothing uses the family before then. */
+	@font-face {
+		font-family: 'ZT YueDongHei';
+		src: url('/fonts/zt-yuedonghei/ZT-YueDongHei.ttf') format('truetype');
+		font-weight: 400 900;
+		font-display: swap;
+		/* CJK only, so Latin letters and digits still fall through to Google Sans Code */
+		unicode-range: U+2014-201D, U+2026, U+3000-303F, U+4E00-9FFF, U+FF00-FFEF;
+	}
+	html[data-fuzz-lang='zh'] main,
+	html[data-fuzz-lang='zh'] main * {
+		font-family: 'ZT YueDongHei', var(--font-body), sans-serif !important;
+	}
+</style>
+
 <style>
 	main {
 		width: 960px;
